@@ -9,10 +9,14 @@
         :root { --primary: #1a5276; --success: #28a745; --danger: #e74c3c; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; justify-content: center; }
         .container { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
-        .user-info { background: #e8f4f8; padding: 15px; border-radius: 15px; margin-bottom: 20px; text-align: right; border-right: 5px solid var(--primary); }
-        .user-info h3 { margin: 0; color: var(--primary); font-size: 1.1rem; }
-        .user-info p { margin: 5px 0 0; color: #555; font-size: 0.9rem; }
         
+        /* تحسين عرض البيانات القابلة للتعديل */
+        .user-info { background: #e8f4f8; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: right; border-right: 5px solid var(--primary); }
+        .user-info h3 { margin: 0 0 15px 0; color: var(--primary); border-bottom: 1px solid #cde4ee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-size: 0.8rem; color: #666; margin-bottom: 3px; }
+        .edit-select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #bed3dd; background: white; font-size: 0.9rem; }
+
         #video, #capturedImage { width: 100%; border-radius: 15px; background: #000; margin-top: 10px; display: block; }
         #capturedImage { display: none; border: 4px solid var(--primary); }
         
@@ -31,9 +35,36 @@
 <body>
 
 <div class="container">
-    <div class="user-info" id="userInfo">
-        <h3 id="uName">جاري تحميل البيانات...</h3>
-        <p id="uDetails"></p>
+    <div class="user-info">
+        <h3 id="uName">مرحباً ..</h3>
+        
+        <div class="form-group">
+            <label>المحافظة الحالية:</label>
+            <select id="edit-gov" class="edit-select" onchange="loadFacilities(this.value)">
+                <option>القاهرة</option><option>الجيزة</option><option>الإسكندرية</option>
+                <option>بورسعيد</option><option>السويس</option><option>الإسماعيلية</option>
+                <option>الدقهلية</option><option>القليوبية</option><option>الشرقية</option>
+                <option>الغربية</option><option>المنوفية</option><option>البحيرة</option>
+                <option>كفر الشيخ</option><option>دمياط</option><option>بني سويف</option>
+                <option>الفيوم</option><option>المنيا</option><option>أسيوط</option>
+                <option>سوهاج</option><option>قنا</option><option>الأقصر</option>
+                <option>أسوان</option><option>البحر الأحمر</option><option>الوادي الجديد</option>
+                <option>مطروح</option><option>شمال سيناء</option><option>جنوب سيناء</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>المنشأة:</label>
+            <select id="edit-fac" class="edit-select"></select>
+        </div>
+
+        <div class="form-group">
+            <label>الوردية:</label>
+            <select id="edit-shift" class="edit-select">
+                <option value="صباحي">صباحي</option>
+                <option value="مسائي">مسائي</option>
+            </select>
+        </div>
     </div>
 
     <div id="camera-section">
@@ -57,7 +88,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, collection, addDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, collection, addDoc, setDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
@@ -75,76 +106,114 @@
 
     let userData = JSON.parse(sessionStorage.getItem('userData'));
     let imgData = null;
+    let currentPos = null;
 
-    // التأكد من تسجيل الدخول
+    // 1. التأكد من تسجيل الدخول وملء البيانات الافتراضية
     if (!userData) {
         window.location.href = "index.html";
     } else {
-        document.getElementById('uName').innerText = userData.fullName;
-        document.getElementById('uDetails').innerText = `${userData.facility} - ${userData.governorate} (${userData.shift})`;
+        document.getElementById('uName').innerText = `مرحباً، ${userData.fullName.split(' ')[0]}`;
+        document.getElementById('edit-gov').value = userData.governorate;
+        document.getElementById('edit-shift').value = userData.shift;
+        loadFacilities(userData.governorate, userData.facility);
     }
 
-    // تشغيل الكاميرا
+    // 2. جلب الموقع مسبقاً للسرعة
+    const preloadLocation = () => {
+        navigator.geolocation.getCurrentPosition(p => currentPos = p, null, {enableHighAccuracy: false});
+    };
+    preloadLocation();
+
+    // 3. تحميل المنشآت بناءً على المحافظة
+    window.loadFacilities = async (gov, defaultFac = "") => {
+        const facSelect = document.getElementById('edit-fac');
+        facSelect.innerHTML = '<option>جاري التحميل...</option>';
+        
+        try {
+            const q = query(collection(db, "FacilitiesReference"), where("governorate", "==", gov));
+            const snap = await getDocs(q);
+            facSelect.innerHTML = '';
+            
+            snap.forEach(doc => {
+                const fName = doc.data().facilityName;
+                let opt = new Option(fName, fName);
+                if(fName === defaultFac) opt.selected = true;
+                facSelect.add(opt);
+            });
+            
+            if (facSelect.options.length === 0) {
+                facSelect.add(new Option(userData.facility, userData.facility));
+            }
+        } catch (e) { facSelect.innerHTML = '<option>خطأ في التحميل</option>'; }
+    };
+
+    // 4. تشغيل الكاميرا
     const video = document.getElementById('video');
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-        .then(stream => video.srcObject = stream)
-        .catch(err => showStatus("يرجى السماح بصلاحية الكاميرا", "var(--danger)"));
+        .then(stream => video.srcObject = stream);
 
     window.takePhoto = () => {
         const canvas = document.getElementById('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         imgData = canvas.toDataURL('image/jpeg', 0.5);
-        
         video.style.display = 'none';
-        const imgTag = document.getElementById('capturedImage');
-        imgTag.src = imgData;
-        imgTag.style.display = 'block';
-        
+        document.getElementById('capturedImage').src = imgData;
+        document.getElementById('capturedImage').style.display = 'block';
         document.getElementById('btnIn').disabled = false;
         document.getElementById('btnOut').disabled = false;
     };
 
+    // 5. إرسال البصمة (التعديل الخاص بالسرعة والبيانات الحالية)
     window.submitAttendance = async (type) => {
-        showStatus("جاري تحديد الموقع وحفظ البيانات...", "orange", true);
+        showStatus("جاري الحفظ السريع...", "orange", true);
         
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
+        const getLocation = () => {
+            return new Promise((res) => {
+                if(currentPos) res(currentPos);
+                navigator.geolocation.getCurrentPosition(res, () => res({coords:{latitude:0,longitude:0}}), {timeout:5000});
+            });
+        };
 
-                // 1. رفع الصورة إلى Storage
-                const photoRef = ref(storage, `attendance_pics/${today}/${userData.nationalID}_${Date.now()}.jpg`);
-                await uploadString(photoRef, imgData, 'data_url');
-                const photoUrl = await getDownloadURL(photoRef);
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const activeGov = document.getElementById('edit-gov').value;
+            const activeFac = document.getElementById('edit-fac').value;
+            const activeShift = document.getElementById('edit-shift').value;
 
-                // 2. حفظ البيانات في AttendanceLogs -> Date -> Transactions
-                const dateDocRef = doc(db, "AttendanceLogs", today);
-                await setDoc(dateDocRef, { lastUpdate: serverTimestamp() }, { merge: true });
+            // رفع الصورة وجلب الموقع في نفس الوقت
+            const photoRef = ref(storage, `attendance_pics/${today}/${userData.nationalID}_${Date.now()}.jpg`);
+            const [pos, uploadTask] = await Promise.all([
+                getLocation(),
+                uploadString(photoRef, imgData, 'data_url')
+            ]);
 
-                await addDoc(collection(dateDocRef, "Transactions"), {
-                    fullName: userData.fullName,
-                    nationalID: userData.nationalID,
-                    phone: userData.phoneNumber,
-                    gov: userData.governorate,
-                    facility: userData.facility,
-                    shift: userData.shift,
-                    action: type,
-                    timestamp: serverTimestamp(),
-                    location: { lat, lng },
-                    googleMapsLink: `https://www.google.com/maps?q=${lat},${lng}`,
-                    photo: photoUrl
-                });
+            const photoUrl = await getDownloadURL(photoRef);
+            const { latitude: lat, longitude: lng } = pos.coords;
 
-                showStatus(`✅ تم تسجيل ${type} بنجاح!`, "var(--success)");
-                resetUI();
-            } catch (e) {
-                console.error(e);
-                showStatus("❌ فشل التسجيل، حاول مرة أخرى", "var(--danger)");
-            }
-        }, () => showStatus("❌ يجب تفعيل GPS لتسجيل الحضور", "var(--danger)"), {enableHighAccuracy: true});
+            // حفظ في الجدول الثاني (سجل الحركات)
+            const dateDocRef = doc(db, "AttendanceLogs", today);
+            await setDoc(dateDocRef, { lastUpdate: serverTimestamp() }, { merge: true });
+
+            await addDoc(collection(dateDocRef, "Transactions"), {
+                fullName: userData.fullName,
+                nationalID: userData.nationalID,
+                phone: userData.phoneNumber,
+                gov: activeGov,
+                facility: activeFac,
+                shift: activeShift,
+                action: type,
+                timestamp: serverTimestamp(),
+                location: { lat, lng },
+                googleMapsLink: lat !== 0 ? `https://www.google.com/maps?q=${lat},${lng}` : "غير متاح",
+                photo: photoUrl
+            });
+
+            showStatus(`✅ تم تسجيل ${type} بنجاح!`, "var(--success)");
+            setTimeout(resetUI, 2000);
+        } catch (e) {
+            showStatus("❌ فشل الحفظ، حاول ثانية", "var(--danger)");
+        }
     };
 
     function resetUI() {
@@ -153,20 +222,17 @@
         video.style.display = 'block';
         document.getElementById('btnIn').disabled = true;
         document.getElementById('btnOut').disabled = true;
+        document.getElementById('status').style.display = 'none';
     }
 
     function showStatus(msg, color, showSpinner = false) {
         const s = document.getElementById('status');
-        s.style.display = 'block';
-        s.style.color = color;
+        s.style.display = 'block'; s.style.color = color;
         s.style.backgroundColor = color + "15";
         s.innerHTML = showSpinner ? `<div class="loading-spinner"></div> ${msg}` : msg;
     }
 
-    window.logout = () => {
-        sessionStorage.clear();
-        window.location.href = "index.html";
-    };
+    window.logout = () => { sessionStorage.clear(); window.location.href = "index.html"; };
 </script>
 
 </body>

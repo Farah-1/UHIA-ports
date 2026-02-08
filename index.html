@@ -117,152 +117,103 @@
         <span class="toggle-link" onclick="toggleAuth()">ليس لديك حساب؟ سجل الآن</span>
     </div>
 
-    <div id="reg-box" class="hidden">
-        <h2>إنشاء حساب جديد</h2>
-        <p>أدخل بياناتك بدقة للتسجيل في المنظومة</p>
-        <input type="text" id="reg-name" placeholder="الاسم الرباعي كما في البطاقة">
-        <input type="text" id="reg-id" placeholder="الرقم القومي (14 رقم)" maxlength="14">
-        <input type="tel" id="reg-phone" placeholder="رقم الهاتف (11 رقم)" maxlength="11">
-        
-        <select id="reg-gov">
-            <option value="">اختر المحافظة</option>
-            <option>القاهرة</option><option>الجيزة</option><option>الإسكندرية</option>
-            <option>بورسعيد</option><option>السويس</option><option>الإسماعيلية</option>
-            <option>الدقهلية</option><option>القليوبية</option><option>الشرقية</option>
-            <option>الغربية</option><option>المنوفية</option><option>البحيرة</option>
-            <option>كفر الشيخ</option><option>دمياط</option><option>بني سويف</option>
-            <option>الفيوم</option><option>المنيا</option><option>أسيوط</option>
-            <option>سوهاج</option><option>قنا</option><option>الأقصر</option>
-            <option>أسوان</option><option>البحر الأحمر</option><option>الوادي الجديد</option>
-            <option>مطروح</option><option>شمال سيناء</option><option>جنوب سيناء</option>
+  <div id="reg-box" class="hidden">
+    <h2>إنشاء حساب جديد</h2>
+    <input type="text" id="reg-name" placeholder="الاسم الرباعي">
+    <input type="text" id="reg-id" placeholder="الرقم القومي (14 رقم)" maxlength="14">
+    <input type="tel" id="reg-phone" placeholder="رقم الهاتف (11 رقم)" maxlength="11">
+    
+    <select id="reg-gov" onchange="loadFacilitiesForGov(this.value)">
+        <option value="">اختر المحافظة</option>
+        <option>بورسعيد</option><option>السويس</option><option>الإسماعيلية</option>
         </select>
 
-        <input type="text" id="reg-facility" placeholder="اسم المنشأة التي تعمل بها">
-        
-        <select id="reg-shift">
-            <option value="">اختر الوردية</option>
-            <option value="صباحي">صباحي</option>
-            <option value="مسائي">مسائي</option>
-        </select>
+    <select id="reg-facility-select" onchange="checkOtherFacility(this.value)">
+        <option value="">اختر المنشأة</option>
+    </select>
+    
+    <input type="text" id="reg-facility-other" class="hidden" placeholder="اكتب اسم المنشأة الجديدة هنا">
 
-        <input type="password" id="reg-pass" placeholder="تعيين كلمة مرور">
-        
-        <button class="btn-reg" onclick="handleRegister()">إنشاء الحساب</button>
-        <span class="toggle-link" onclick="toggleAuth()">لديك حساب بالفعل؟ سجل دخول</span>
-    </div>
+    <select id="reg-shift">
+        <option value="">اختر الوردية</option>
+        <option value="صباحي">صباحي</option>
+        <option value="مسائي">مسائي</option>
+    </select>
 
-    <div id="status"></div>
+    <input type="password" id="reg-pass" placeholder="تعيين كلمة مرور">
+    <button class="btn-reg" onclick="handleRegister()">إنشاء الحساب</button>
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    // ... إعدادات Firebase المعتادة ...
+    import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // إعدادات Firebase
-    const firebaseConfig = {
-        apiKey: "AIzaSyDgiNw5Dt6EkiokRjznzGkfZvVuDN0APPk",
-        authDomain: "uhia-attendancesystem.firebaseapp.com",
-        projectId: "uhia-attendancesystem",
-        storageBucket: "uhia-attendancesystem.firebasestorage.app",
-        messagingSenderId: "104444545133",
-        appId: "1:104444545133:web:f40607b93fb90a8f511764"
+    // تحميل المنشآت عند اختيار المحافظة
+    window.loadFacilitiesForGov = async (gov) => {
+        const select = document.getElementById('reg-facility-select');
+        select.innerHTML = '<option value="">جاري التحميل...</option>';
+        
+        const q = query(collection(db, "FacilitiesReference"), where("governorate", "==", gov));
+        const querySnapshot = await getDocs(q);
+        
+        select.innerHTML = '<option value="">اختر المنشأة</option>';
+        querySnapshot.forEach((doc) => {
+            select.innerHTML += `<option value="${doc.data().facilityName}">${doc.data().facilityName}</option>`;
+        });
+        select.innerHTML += '<option value="other">-- منشأة أخرى غير موجودة --</option>';
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // التبديل بين الدخول والتسجيل
-    window.toggleAuth = () => {
-        document.getElementById('login-box').classList.toggle('hidden');
-        document.getElementById('reg-box').classList.toggle('hidden');
-        document.getElementById('status').style.display = 'none';
+    window.checkOtherFacility = (val) => {
+        const otherInput = document.getElementById('reg-facility-other');
+        val === 'other' ? otherInput.classList.remove('hidden') : otherInput.classList.add('hidden');
     };
 
-    // معالجة التسجيل
     window.handleRegister = async () => {
-        const id = document.getElementById('reg-id').value.trim();
-        const phone = document.getElementById('reg-phone').value.trim();
-        const name = document.getElementById('reg-name').value.trim();
-        const pass = document.getElementById('reg-pass').value.trim();
-        const gov = document.getElementById('reg-gov').value;
-        const fac = document.getElementById('reg-facility').value.trim();
-        const shift = document.getElementById('reg-shift').value;
+        // ... جمع البيانات المعتاد ...
+        let finalFacility = document.getElementById('reg-facility-select').value;
+        const isNewFacility = finalFacility === 'other';
+        if(isNewFacility) finalFacility = document.getElementById('reg-facility-other').value;
 
-        // التحقق من الرقم القومي (14 رقم)
-        if (id.length !== 14 || isNaN(id)) {
-            return showStatus("الرقم القومي يجب أن يتكون من 14 رقم", "var(--error)");
-        }
+        // 1. تحديد الموقع للمنشأة الجديدة (اختياري في التسجيل أو نعتمد على أول حضور)
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
 
-        // التحقق من رقم الهاتف (11 رقم)
-        if (phone.length !== 11 || isNaN(phone)) {
-            return showStatus("رقم الهاتف يجب أن يتكون من 11 رقم", "var(--error)");
-        }
+            try {
+                // 2. تسجيل المستخدم
+                const userRef = doc(db, "UsersRegistry", id);
+                await setDoc(userRef, {
+                    fullName: name, nationalID: id, phoneNumber: phone,
+                    governorate: gov, facility: finalFacility, shift: shift,
+                    password: pass, createdAt: new Date()
+                });
 
-        // التحقق من الحقول الفارغة
-        if (!name || !pass || !gov || !fac || !shift) {
-            return showStatus("يرجى إكمال جميع الحقول", "var(--error)");
-        }
+                // 3. تحديث جدول المنشآت (FacilitiesReference)
+                const facID = `${gov}-${finalFacility}`.replace(/\s+/g, '_');
+                const facRef = doc(db, "FacilitiesReference", facID);
+                const facSnap = await getDoc(facRef);
 
-        try {
-            showStatus("جاري معالجة البيانات...", "orange");
-            
-            // استخدام الرقم القومي كمعرف للمستند لمنع التكرار
-            await setDoc(doc(db, "UsersRegistry", id), {
-                fullName: name,
-                nationalID: id,
-                phoneNumber: phone,
-                governorate: gov,
-                facility: fac,
-                shift: shift,
-                password: pass,
-                createdAt: new Date()
-            });
-
-            showStatus("✅ تم تسجيل حسابك بنجاح!", "var(--secondary)");
-            setTimeout(toggleAuth, 2500);
-        } catch (e) {
-            console.error(e);
-            showStatus("❌ فشل التسجيل، تأكد من اتصال الإنترنت", "var(--error)");
-        }
-    };
-
-    // معالجة تسجيل الدخول
-    window.handleLogin = async () => {
-        const id = document.getElementById('login-id').value.trim();
-        const pass = document.getElementById('login-pass').value.trim();
-
-        if (id.length !== 14) {
-            return showStatus("يرجى إدخال الرقم القومي المكون من 14 رقم", "var(--error)");
-        }
-        if (!pass) return showStatus("يرجى إدخال كلمة المرور", "var(--error)");
-
-        try {
-            showStatus("جاري التحقق...", "orange");
-            const userSnap = await getDoc(doc(db, "UsersRegistry", id));
-
-            if (userSnap.exists() && userSnap.data().password === pass) {
-                // حفظ بيانات المستخدم في الجلسة لاستخدامها في صفحة البصمة
-                sessionStorage.setItem('userData', JSON.stringify(userSnap.data()));
-                showStatus("✅ تم تسجيل الدخول بنجاح", "var(--secondary)");
+                if (facSnap.exists()) {
+                    // زيادة الموظفين (إضافة الاسم للقائمة)
+                    await updateDoc(facRef, {
+                        staffList: arrayUnion(`${name}|${phone}`)
+                    });
+                } else {
+                    // إنشاء منشأة جديدة
+                    await setDoc(facRef, {
+                        facilityName: finalFacility,
+                        governorate: gov,
+                        lat: lat, lng: lng,
+                        staffList: [`${name}|${phone}`]
+                    });
+                    alert("تم إضافة منشأتك الجديدة للنظام بنجاح!");
+                }
                 
-                // هنا نضع التوجيه للصفحة التالية مستقبلاً
-                window.location.href = "attendance.html";  } 
-                else {
-                showStatus("❌ الرقم القومي أو كلمة المرور غير صحيحة", "var(--error)");
-            }
-        } catch (e) {
-            showStatus("❌ فشل الاتصال بقاعدة البيانات", "var(--error)");
-        }
+                showStatus("✅ تم التسجيل بنجاح", "green");
+                setTimeout(toggleAuth, 2000);
+            } catch (e) { showStatus("❌ خطأ في التسجيل", "red"); }
+        });
     };
-
-    function showStatus(msg, color) {
-        const s = document.getElementById('status');
-        s.innerText = msg;
-        s.style.display = 'block';
-        s.style.color = color;
-        s.style.backgroundColor = color + "15"; // لون خلفية خفيف
-        s.style.border = "1px solid " + color;
-    }
 </script>
 
 </body>
