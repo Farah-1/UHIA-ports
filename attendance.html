@@ -273,6 +273,23 @@
 </div>
 
 <script type="module">
+    window.onload = () => {
+    // التأكد من وجود بيانات مستخدم
+    if (!userData) { 
+        location.href = "index.html"; 
+        return; 
+    }
+
+    // تصحيح المسار: إذا كان أدمن يحاول فتح صفحة المستخدم، حوله لصفحة الأدمن
+    if (userData.role === 'admin') {
+        location.href = "admin.html";
+        return;
+    }
+
+    // بقية كود التشغيل الأصلي الخاص بك...
+    document.getElementById('uName').innerText = "مرحباً، " + userData.fullName;
+    // ...
+};
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, collection, setDoc, getDoc, getDocs, query, where, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
