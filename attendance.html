@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول لمنظومه المنافذ الصحيه</title>
+    <title>منظومه المنافذ الصحيه</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -96,35 +96,8 @@
             font-size: 0.9rem;
             color: #64748b;
         }
-.custom-select {
-            width: 100%;
-            padding: 14px 40px 14px 16px; /* زيادة الحشو من اليمين واليسار */
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-family: inherit;
-            box-sizing: border-box;
-            background-color: #f8fafc;
-            appearance: none; /* إزالة سهم المتصفح الافتراضي */
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            /* إضافة سهم مخصص بعيد عن الحافة */
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: left 15px center; /* وضع السهم على اليسار مع إزاحة 15px */
-            background-size: 18px;
-            cursor: pointer;
-            transition: border-color 0.3s;
-        }
 
-        .custom-select:focus {
-            outline: none;
-            border-color: var(--secondary);
-            background-color: #fff;
-        }
-
-        /* تعديل الـ Input ليتناسب مع شكل الـ Select */
-        .custom-input {
+        .custom-select, .custom-input {
             width: 100%;
             padding: 14px 16px;
             border: 2px solid #e2e8f0;
@@ -133,6 +106,22 @@
             font-family: inherit;
             box-sizing: border-box;
             background-color: #f8fafc;
+            transition: border-color 0.3s;
+        }
+
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: left 15px center;
+            background-size: 18px;
+            cursor: pointer;
+        }
+
+        .custom-select:focus, .custom-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            background-color: #fff;
         }
 
         .action-grid {
@@ -216,7 +205,7 @@
         <div class="logo-placeholder">
             <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZP7dAnsdRJczRl9RZ7IfcQ_sCpiz4xCayow&s" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 14px;">
         </div>
-        <h1>تسجيل الدخول لمنظومه المنافذ الصحيه</h1>
+        <h1>تسجيل الحضور والانصراف</h1>
     </div>
 
     <div class="content-body">
@@ -225,19 +214,15 @@
             <div id="shift-display" class="shift-badge">جاري حساب الوردية...</div>
         </div>
 
-<div class="input-group">
-    <label>المنشأة الطبية</label>
-    <select id="edit-fac" class="custom-select" onchange="toggleOtherFac(this.value)"></select>
-    
-    <input type="text" id="new-fac-name" class="custom-input hidden" placeholder="أدخل اسم المنشأة الجديدة" style="margin-top:12px;" oninput="validateInputs()">
-    
-    <button id="add-fac-btn" class="add-fac-btn hidden" onclick="addNewFacility()">+ اعتماد هذه المنشأة في موقعي الحالي</button>
-</div>
+        <div class="input-group">
+            <label>المحافظة</label>
+            <select id="edit-gov" class="custom-select"></select>
+        </div>
 
         <div class="input-group">
             <label>المنشأة الطبية</label>
             <select id="edit-fac" class="custom-select"></select>
-            <input type="text" id="new-fac-name" class="custom-input hidden" placeholder="أدخل اسم المنشأة الجديدة" style="margin-top:12px;">
+            <input type="text" id="new-fac-name" class="custom-input hidden" placeholder="أدخل اسم المنشأة الجديدة" style="margin-top:12px;" oninput="validateInputs()">
             <button id="add-fac-btn" class="add-fac-btn hidden" onclick="addNewFacility()">+ اعتماد هذه المنشأة في موقعي الحالي</button>
         </div>
 
@@ -247,7 +232,7 @@
             <div class="capture-overlay">
                 <button id="snap-btn" class="capture-btn" onclick="takeSnapshot()">
                     <i class="material-icons">photo_camera</i>
-                    التقط صورة الوجه أولاً
+                    التقط صورة الوجه
                 </button>
             </div>
         </div>
@@ -268,32 +253,15 @@
         <a href="#" onclick="logout()" style="display:block; text-align:center; margin-top:20px; color:#64748b; text-decoration:none;">
             <i class="material-icons" style="vertical-align: middle;">exit_to_app</i> تسجيل الخروج
         </a>
+
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #e2e8f0; text-align: center; font-size: 0.8rem; color: #94a3b8;">
-    <p style="margin: 5px 0;">جميع الحقوق محفوظة &copy; 2026 UHIA System</p>
-    <p style="margin: 5px 0;">في حاله وجود استفسار او شكاوي يرجي ارسال بريد الكتروني علي   :</p>
-    <a href="mailto:randa.abdo@uhia.gov.eg" style="color: var(--secondary); text-decoration: none; font-weight: bold;">your-email@example.com</a>
-</div>
+            <p style="margin: 5px 0;">جميع الحقوق محفوظة &copy; 2026 UHIA System</p>
+            <a href="mailto:randa.abdo@uhia.gov.eg" style="color: var(--secondary); text-decoration: none; font-weight: bold;">randa.abdo@uhia.gov.eg</a>
+        </div>
     </div>
 </div>
 
 <script type="module">
-    window.onload = () => {
-    // التأكد من وجود بيانات مستخدم
-    if (!userData) { 
-        location.href = "index.html"; 
-        return; 
-    }
-
-    // تصحيح المسار: إذا كان أدمن يحاول فتح صفحة المستخدم، حوله لصفحة الأدمن
-    if (userData.role === 'admin') {
-        location.href = "admin.html";
-        return;
-    }
-
-    // بقية كود التشغيل الأصلي الخاص بك...
-    document.getElementById('uName').innerText = "مرحباً، " + userData.fullName;
-    // ...
-};
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, collection, setDoc, getDoc, getDocs, query, where, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -383,13 +351,16 @@
         showStatus("جاري تحديد الموقع بدقة...", "var(--warning)");
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const facID = `${gov}-${fName}`.replace(/\s+/g, '_');
-            await setDoc(doc(db, "FacilitiesReference", facID), {
-                facilityName: fName, governorate: gov, 
-                lat: pos.coords.latitude, lng: pos.coords.longitude
-            });
-            showStatus("تم اعتماد المنشأة بنجاح", "var(--success)");
-            window.loadFacilities(gov, fName);
-        }, () => showStatus("فشل تحديد الموقع", "var(--danger)"), { enableHighAccuracy: true, maximumAge: 0 });
+            try {
+                await setDoc(doc(db, "FacilitiesReference", facID), {
+                    facilityName: fName, governorate: gov, 
+                    lat: pos.coords.latitude, lng: pos.coords.longitude,
+                    addedBy: userData.fullName, timestamp: serverTimestamp()
+                });
+                showStatus("تم اعتماد المنشأة بنجاح", "var(--success)");
+                window.loadFacilities(gov, fName);
+            } catch (e) { showStatus("خطأ: " + e.message, "var(--danger)"); }
+        }, () => showStatus("فشل تحديد الموقع", "var(--danger)"), { enableHighAccuracy: true });
     };
 
     // --- Main Attendance Logic ---
@@ -408,24 +379,22 @@
                 let fName = document.getElementById('edit-fac').value;
                 if (fName === 'other') fName = document.getElementById('new-fac-name').value.trim();
 
-                // 1. مسافة الأمان
                 const facID = `${document.getElementById('edit-gov').value}-${fName}`.replace(/\s+/g, '_');
                 const facSnap = await getDoc(doc(db, "FacilitiesReference", facID));
+                
                 if (facSnap.exists()) {
                     const dist = calculateDistance(uLat, uLng, facSnap.data().lat, facSnap.data().lng);
-                    if (dist > 1.0) return showStatus(`بعيد جداً (${dist.toFixed(2)} كم). يجب التواجد بالمقر.`, "var(--danger)");
+                    if (dist > 0.5) return showStatus(`بعيد عن الموقع (${(dist * 1000).toFixed(0)} متر).`, "var(--danger)");
                 }
 
-                // 2. قفل الجهاز (Device Lock)
                 const qDev = query(collection(db, "DailyDeviceLogs"), where("date", "==", today), where("deviceId", "==", deviceId));
                 const devSnap = await getDocs(qDev);
                 if (!devSnap.empty && devSnap.docs[0].data().nationalID !== userData.nationalID) {
-                    return showStatus("هذا الجهاز مسجل لموظف آخر اليوم!", "var(--danger)");
+                    return showStatus("هذا الجهاز مستخدم لموظف آخر اليوم!", "var(--danger)");
                 }
 
-                // showStatus("جاري رفع الصورة والبيانات...", "var(--warning)");
+                showStatus("جاري الرفع...", "var(--warning)");
 
-                // 3. رفع الصورة لـ Drive
                 let photoUrl = "";
                 try {
                     const response = await fetch(GOOGLE_SCRIPT_URL, {
@@ -450,7 +419,7 @@
                     await setDoc(doc(db, "DailyDeviceLogs", `${today}_${deviceId}`), { date: today, deviceId: deviceId, nationalID: userData.nationalID });
                     showStatus("تم تسجيل الدخول بنجاح", "var(--success)");
                 } else {
-                    if (!recordSnap.exists()) return showStatus("لا يوجد سجل دخول لهذه الوردية!", "var(--danger)");
+                    if (!recordSnap.exists()) return showStatus("لا يوجد سجل دخول!", "var(--danger)");
                     if (recordSnap.data().logoutTime) return showStatus("سجلت خروجك سابقاً!", "var(--danger)");
 
                     const diffMin = Math.floor((new Date() - recordSnap.data().loginTime.toDate()) / 60000);
@@ -462,24 +431,25 @@
                     });
                     showStatus(`تم تسجيل الخروج. المدة: ${duration}`, "var(--success)");
                 }
-
-                // setTimeout(() => location.reload(), 3000);
             } catch (err) { showStatus("خطأ: " + err.message, "var(--danger)"); }
-        }, () => showStatus("فشل الوصول للموقع", "var(--danger)"), { enableHighAccuracy: true, maximumAge: 0 });
+        }, () => showStatus("فشل الوصول للموقع", "var(--danger)"), { enableHighAccuracy: true });
     };
 
     // --- Init ---
-    window.onload = () => {
+    window.onload = async () => {
         if (!userData) { location.href = "index.html"; return; }
+        if (userData.role === 'admin') { location.href = "admin.html"; return; }
+
         document.getElementById('uName').innerText = "مرحباً، " + userData.fullName;
         document.getElementById('shift-display').innerText = "الوردية: " + calculateShift();
 
         const govs = ["القاهرة", "الجيزة", "الإسكندرية", "بورسعيد", "السويس", "الإسماعيلية", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان","البحيرة","الشرقية","الغربية","المنوفية","الدقهلية","الفيوم","المنيا","كفر الشيخ","شمال سيناء","جنوب سيناء","البحر الاحمر","الوادي الجديد","مطروح","بني سويف","القليوبيه","دمياط"];
         const gSelect = document.getElementById('edit-gov');
         govs.forEach(g => gSelect.add(new Option(g, g)));
-        gSelect.value = userData.governorate;
+        
+        gSelect.value = userData.governorate || "القاهرة";
 
-        window.loadFacilities(userData.governorate, userData.facility);
+        window.loadFacilities(gSelect.value, userData.facility);
         startCamera();
         
         gSelect.addEventListener('change', (e) => window.loadFacilities(e.target.value));
@@ -488,11 +458,15 @@
 
     window.loadFacilities = async (gov, defaultFac = "") => {
         const fSelect = document.getElementById('edit-fac');
+        fSelect.innerHTML = '<option value="">جاري تحميل المنشآت...</option>';
+        
         const q = query(collection(db, "FacilitiesReference"), where("governorate", "==", gov));
         const snap = await getDocs(q);
+        
         fSelect.innerHTML = '<option value="">اختر المنشأة</option>';
         snap.forEach(d => fSelect.add(new Option(d.data().facilityName, d.data().facilityName)));
         fSelect.add(new Option("-- منشأة غير مدرجة --", "other"));
+        
         if (defaultFac) fSelect.value = defaultFac;
         window.validateInputs();
     };
@@ -509,39 +483,6 @@
         s.style.display = 'block'; s.innerText = m; s.style.color = c;
         s.style.backgroundColor = c + "1A"; s.style.border = "1px solid " + c;
     }
-    window.addNewFacility = async () => {
-    const gov = document.getElementById('edit-gov').value;
-    const fName = document.getElementById('new-fac-name').value.trim();
-    
-    if (!fName) return showStatus("اكتب اسم المنشأة أولاً", "var(--danger)");
-
-    showStatus("جاري تحديد الموقع بدقة لتعريف المنشأة...", "var(--warning)");
-    
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        // إنشاء معرّف فريد للمنشأة (المحافظة + الاسم)
-        const facID = `${gov}-${fName}`.replace(/\s+/g, '_');
-        
-        try {
-            await setDoc(doc(db, "FacilitiesReference", facID), {
-                facilityName: fName,
-                governorate: gov,
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-                addedBy: userData.fullName,
-                timestamp: serverTimestamp()
-            });
-            
-            showStatus("تم اعتماد المنشأة بنجاح في موقعك الحالي", "var(--success)");
-            
-            // إعادة تحديث القائمة واختيار المنشأة الجديدة تلقائياً
-            window.loadFacilities(gov, fName);
-            
-        } catch (error) {
-            showStatus("خطأ في الحفظ: " + error.message, "var(--danger)");
-        }
-    }, () => showStatus("فشل تحديد الموقع، تأكد من تفعيل GPS", "var(--danger)"), 
-    { enableHighAccuracy: true });
-};
 
     window.logout = () => { sessionStorage.clear(); location.href = "index.html"; };
 </script>
