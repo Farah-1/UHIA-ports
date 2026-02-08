@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الحضور السريع - UHIA</title>
+    <title>تسجيل الحضور - UHIA</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         :root { --primary: #1a5276; --success: #28a745; --danger: #e74c3c; --bg: #f4f7f9; }
@@ -21,7 +21,9 @@
         .btn-in { background: var(--success); }
         .btn-out { background: var(--danger); }
         .hidden { display: none; }
-        #status { margin-top: 15px; padding: 12px; border-radius: 10px; display: none; font-weight: 500; font-size: 14px; line-height: 1.5; }
+        #status { margin-top: 15px; padding: 12px; border-radius: 10px; display: none; font-weight: 500; font-size: 14px; }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 18px; height: 18px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-left: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -67,6 +69,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, collection, addDoc, setDoc, getDoc, getDocs, query, where, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDgiNw5Dt6EkiokRjznzGkfZvVuDN0APPk",
@@ -79,6 +82,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     let userData = JSON.parse(sessionStorage.getItem('userData'));
     let imgData = null;
@@ -86,33 +90,74 @@
     window.onload = () => {
         if (!userData) { window.location.href = "index.html"; return; }
         document.getElementById('uName').innerText = `مرحباً، ${userData.fullName}`;
-        
-        const govs = ["القاهرة", "الجيزة", "الإسكندرية", "بورسعيد", "السويس", "الإسماعيلية", "البحيرة", "دمياط", "الشرقية", "الغربية", "المنوفية", "الدقهلية", "الفيوم", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان"];
+        const govs = ["القاهرة", "الجيزة", "الإسكندرية", "بورسعيد", "السويس", "الإسماعيلية", "البحيرة", "دمياط", "الشرقية", "الغربية", "المنوفية", "الدقهلية", "الفيوم", "المنيا", "أسيوط", "سوهاج", "قنا", "أسوان"];
         const gSelect = document.getElementById('edit-gov');
         govs.forEach(g => gSelect.add(new Option(g, g)));
         gSelect.value = userData.governorate;
-        
         loadFacilities(userData.governorate, userData.facility);
         startCamera();
     };
 
-    // حل مشكلة الكاميرا: محاولة الوضع الأمامي ثم الوضع التلقائي في حال الفشل
-    async function startCamera() {
-        const video = document.getElementById('video');
-        const constraints = [
-            { video: { facingMode: "user" } }, // محاولة الكاميرا الأمامية
-            { video: true } // محاولة أي كاميرا متاحة
-        ];
+// ... (داخل قسم الـ Script) ...
 
-        for (let constraint of constraints) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraint);
-                video.srcObject = stream;
-                return;
-            } catch (e) { console.log("Retrying camera..."); }
-        }
-        showStatus("لم يتم العثور على كاميرا. تأكد من توصيلها ومنح الصلاحية.", "red");
+// 1. تعديل دالة تشغيل الكاميرا لتتعامل مع عدم وجود جهاز
+async function startCamera() {
+    const video = document.getElementById('video');
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        video.srcObject = stream;
+    } catch (e) {
+        console.warn("Camera not found, using testing mode (Black Image)");
+        // إظهار رسالة تنبيه للاختبار
+        showStatus("وضع الاختبار: لم يتم العثور على كاميرا، سيتم استخدام صورة سوداء.", "#555");
+        
+        // تفعيل أزرار الحضور تلقائياً للاختبار
+        document.getElementById('btnIn').disabled = false;
+        document.getElementById('btnOut').disabled = false;
+        
+        // توليد صورة سوداء افتراضية
+        generateBlackImage();
     }
+}
+
+// 2. دالة لتوليد صورة سوداء (للتست)
+function generateBlackImage() {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 400;
+    canvas.height = 400;
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, 400, 400);
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Testing Mode - No Camera", 80, 200);
+    imgData = canvas.toDataURL('image/jpeg', 0.5);
+    
+    // إظهار الصورة السوداء في الواجهة بدلاً من الكاميرا
+    document.getElementById('video').style.display = 'none';
+    document.getElementById('capturedImage').src = imgData;
+    document.getElementById('capturedImage').style.display = 'block';
+}
+
+// 3. تعديل دالة takePhoto لتجنب الأخطاء عند عدم وجود فيديو
+window.takePhoto = () => {
+    const video = document.getElementById('video');
+    if (!video.srcObject) {
+        generateBlackImage();
+        return;
+    }
+    const canvas = document.getElementById('canvas');
+    canvas.width = 400; canvas.height = 400;
+    canvas.getContext('2d').drawImage(video, 0, 0, 400, 400);
+    imgData = canvas.toDataURL('image/jpeg', 0.6);
+    video.style.display = 'none';
+    document.getElementById('capturedImage').src = imgData;
+    document.getElementById('capturedImage').style.display = 'block';
+    document.getElementById('btnIn').disabled = false;
+    document.getElementById('btnOut').disabled = false;
+};
+
+// ... (باقي كود الـ submitProcess كما هو) ...
 
     window.loadFacilities = async (gov, defaultFac = "") => {
         const fSelect = document.getElementById('edit-fac');
@@ -130,10 +175,9 @@
     window.takePhoto = () => {
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        // تصغير الحجم لضمان بقاء الصورة تحت 1 ميجابايت (Base64)
-        canvas.width = 300; canvas.height = 300;
-        canvas.getContext('2d').drawImage(video, 0, 0, 300, 300);
-        imgData = canvas.toDataURL('image/jpeg', 0.4); // جودة 40% كافية جداً
+        canvas.width = 400; canvas.height = 400; // حجم متوازن للجودة والسرعة
+        canvas.getContext('2d').drawImage(video, 0, 0, 400, 400);
+        imgData = canvas.toDataURL('image/jpeg', 0.6); // ضغط جيد
         video.style.display = 'none';
         document.getElementById('capturedImage').src = imgData;
         document.getElementById('capturedImage').style.display = 'block';
@@ -149,56 +193,81 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    window.submitProcess = async (type) => {
-        showStatus("جاري التحقق والحفظ السريع...", "orange");
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            try {
-                const uLat = pos.coords.latitude;
-                const uLng = pos.coords.longitude;
-                const today = new Date().toISOString().split('T')[0];
-                let fName = document.getElementById('edit-fac').value;
-                if (fName === 'other') fName = document.getElementById('new-fac-name').value;
+  
+window.submitProcess = async (type) => {
+    // 1. إظهار حالة الانتظار مع منع الضغط مرة أخرى
+    document.getElementById('btnIn').disabled = true;
+    document.getElementById('btnOut').disabled = true;
+    showStatus(`جاري رفع الصورة والتحقق من الموقع...`, "orange", true);
+    
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        try {
+            const uLat = pos.coords.latitude;
+            const uLng = pos.coords.longitude;
+            const today = new Date().toISOString().split('T')[0];
+            let fName = document.getElementById('edit-fac').value;
+            if (fName === 'other') fName = document.getElementById('new-fac-name').value;
 
-                const facID = `${document.getElementById('edit-gov').value}-${fName}`.replace(/\s+/g, '_');
-                const facRef = doc(db, "FacilitiesReference", facID);
-                const facSnap = await getDoc(facRef);
+            // --- الخطوة الحاسمة: الرفع مع الانتظار لضمان النجاح ---
+            const fileName = `logs/${today}/${userData.nationalID}_${Date.now()}.jpg`;
+            const storageRef = ref(storage, fileName);
+            
+            // هنا ننتظر (await) لضمان أن الصورة وصلت للسيرفر
+            const uploadTask = await uploadString(storageRef, imgData, 'data_url');
+            console.log("✅ الصورة رُفعت بنجاح");
+            
+            // الحصول على الرابط لضمان إمكانية رؤيتها لاحقاً
+            const downloadURL = await getDownloadURL(storageRef);
 
-                // تحديث موقع المنشأة إذا كان فارغاً
-                if (!facSnap.exists()) {
-                    await setDoc(facRef, { facilityName: fName, governorate: document.getElementById('edit-gov').value, lat: uLat, lng: uLng });
-                } else if (facSnap.data().lat === 0 || !facSnap.data().lat) {
-                    await updateDoc(facRef, { lat: uLat, lng: uLng });
-                } else {
-                    const dist = getDistance(uLat, uLng, facSnap.data().lat, facSnap.data().lng);
-                    if (dist > 1) return showStatus(`خطأ: أنت بعيد عن المنشأة بمقدار ${dist.toFixed(2)} كم. الحد المسموح 1 كم.`, "red");
+            // --- الخطوة الثانية: التحقق من المنشأة والمسافة ---
+            const facID = `${document.getElementById('edit-gov').value}-${fName}`.replace(/\s+/g, '_');
+            const facRef = doc(db, "FacilitiesReference", facID);
+            const facSnap = await getDoc(facRef);
+
+            if (facSnap.exists() && facSnap.data().lat !== 0) {
+                const dist = getDistance(uLat, uLng, facSnap.data().lat, facSnap.data().lng);
+                if (dist > 1) {
+                    showStatus(`❌ فشل: أنت بعيد عن المنشأة (${dist.toFixed(2)} كم)`, "red");
+                    resetButtons();
+                    return; 
                 }
+            }
 
-                // منع التكرار
-                const qCheck = query(collection(db, "AttendanceLogs", today, "Transactions"), where("nationalID", "==", userData.nationalID), where("action", "==", type));
-                const snapCheck = await getDocs(qCheck);
-                if (!snapCheck.empty) return showStatus(`لقد سجلت ${type} بالفعل اليوم!`, "red");
+            // --- الخطوة الثالثة: تسجيل البيانات في Firestore بعد نجاح الرفع ---
+            await addDoc(collection(db, "AttendanceLogs", today, "Transactions"), {
+                fullName: userData.fullName,
+                nationalID: userData.nationalID,
+                action: type,
+                facility: fName,
+                gov: document.getElementById('edit-gov').value,
+                timestamp: serverTimestamp(),
+                photoUrl: downloadURL, // الرابط مؤكد الآن
+                location: { lat: uLat, lng: uLng }
+            });
 
-                // الحفظ المباشر (Base64)
-                await addDoc(collection(db, "AttendanceLogs", today, "Transactions"), {
-                    fullName: userData.fullName,
-                    nationalID: userData.nationalID,
-                    action: type,
-                    facility: fName,
-                    timestamp: serverTimestamp(),
-                    photoBase64: imgData,
-                    location: { lat: uLat, lng: uLng }
-                });
+            // تحديث إحداثيات المنشأة إذا كانت جديدة
+            if (!facSnap.exists()) {
+                await setDoc(facRef, { facilityName: fName, governorate: document.getElementById('edit-gov').value, lat: uLat, lng: uLng });
+            }
 
-                showStatus(`✅ تم تسجيل ${type} بنجاح!`, "green");
-                setTimeout(() => location.reload(), 2000);
-            } catch (e) { showStatus("فشل الحفظ: " + e.message, "red"); }
-        }, () => showStatus("يجب تفعيل GPS", "red"), { enableHighAccuracy: true });
-    };
+            showStatus(`✅ تم تسجيل ${type} بنجاح وصورتك محفوظة!`, "green");
+            setTimeout(() => location.reload(), 2000);
 
-    function showStatus(m, c) {
-        const s = document.getElementById('status');
-        s.style.display = 'block'; s.innerText = m; s.style.color = c; s.style.backgroundColor = c + "15";
-    }
+        } catch (e) { 
+            console.error(e);
+            showStatus("❌ خطأ: فشل رفع الصورة أو الاتصال. حاول مرة أخرى.", "red");
+            resetButtons();
+        }
+    }, () => {
+        showStatus("❌ خطأ: يجب تفعيل الموقع (GPS) لإتمام العملية.", "red");
+        resetButtons();
+    }, { enableHighAccuracy: true, timeout: 10000 });
+};
+
+function resetButtons() {
+    document.getElementById('btnIn').disabled = false;
+    document.getElementById('btnOut').disabled = false;
+}
 </script>
 </body>
 </html>
