@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    
+  <title>منظومة المنافذ الصحية - UHIA</title>
+  <meta property="og:title" content="منظومة المنافذ الصحية - UHIA">
+  <meta property="og:description" content="تسجيل الحضور والانصراف - الهيئة العامة للتأمين الصحي الشامل">
+  <meta property="og:image" content="https://th.bing.com/th/id/R.59d5ce0fdd736c17f99baf306040b306?rik=i9YpNmQIDemEVQ&riu=http%3a%2f%2fwww.alistech-eg.com%2fimg%2fclients-logo%2fuhia.png&ehk=GgAou6EsHRouGC44Sgwpf1HMlX%2bv%2f1ExEbsPIRGBEAE%3d&risl=&pid=ImgRaw&r=0">
+  <meta property="og:type" content="website">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #1a5276; 
+            --secondary: #28a745; 
+            --error: #e74c3c;
+            --bg: #f4f7f9; 
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 15px; 
+        }
+
+        .auth-card { 
+            background: white; 
+            width: 100%; 
+            max-width: 450px; 
+            padding: 2.5rem; 
+            border-radius: 25px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .logo { width: 150px; margin-bottom: 1.5rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+        
+        h2 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1.6rem; }
+        p { color: #666; margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+        input, select { 
+            width: 100%; 
+            padding: 14px; 
+            margin: 10px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 12px; 
+            box-sizing: border-box; 
+            font-size: 16px; 
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 8px rgba(26, 82, 118, 0.1); }
+
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            margin-top: 20px; 
+            border: none; 
+            border-radius: 12px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            font-size: 17px; 
+        }
+
+        .btn-login { background: var(--primary); color: white; }
+        .btn-login:hover { background: #154360; transform: translateY(-2px); }
+
+        .btn-reg { background: var(--secondary); color: white; }
+        .btn-reg:hover { background: #218838; transform: translateY(-2px); }
+
+        .toggle-link { 
+            margin-top: 1.5rem; 
+            color: var(--primary); 
+            cursor: pointer; 
+            text-decoration: none; 
+            font-size: 0.95rem; 
+            display: block; 
+            font-weight: 500;
+        }
+
+        .hidden { display: none !important; }
+
+        #status { 
+            margin-top: 15px; 
+            padding: 12px; 
+            border-radius: 10px; 
+            font-size: 14px; 
+            display: none; 
+            font-weight: 500;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 480px) {
+            .auth-card { padding: 1.5rem; }
+            h2 { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <img src="https://th.bing.com/th/id/R.59d5ce0fdd736c17f99baf306040b306?rik=i9YpNmQIDemEVQ&riu=http%3a%2f%2fwww.alistech-eg.com%2fimg%2fclients-logo%2fuhia.png" class="logo" alt="UHIA Logo">
+    
+    <div id="login-box">
+        <h2>تسجيل الدخول</h2>
+        <p>منظومة المنافذ الصحية - UHIA</p>
+        <input type="text" id="login-id" placeholder="الرقم القومي (14 رقم)" maxlength="14">
+        <input type="password" id="login-pass" placeholder="كلمة المرور">
+        <button class="btn-login" onclick="handleLogin()">دخول</button>
+        <span class="toggle-link" onclick="toggleAuth()">ليس لديك حساب؟ سجل الآن</span>
+    </div>
+
+    <div id="reg-box" class="hidden">
+        <h2>إنشاء حساب جديد</h2>
+        <p>أدخل بياناتك بدقة للتسجيل في المنظومة</p>
+        <input type="text" id="reg-name" placeholder="الاسم الرباعي كما في البطاقة">
+        <input type="text" id="reg-id" placeholder="الرقم القومي (14 رقم)" maxlength="14">
+        <input type="tel" id="reg-phone" placeholder="رقم الهاتف (11 رقم)" maxlength="11">
+        
+        <select id="reg-gov">
+            <option value="">اختر المحافظة</option>
+            <option>القاهرة</option><option>الجيزة</option><option>الإسكندرية</option>
+            <option>بورسعيد</option><option>السويس</option><option>الإسماعيلية</option>
+            <option>الدقهلية</option><option>القليوبية</option><option>الشرقية</option>
+            <option>الغربية</option><option>المنوفية</option><option>البحيرة</option>
+            <option>كفر الشيخ</option><option>دمياط</option><option>بني سويف</option>
+            <option>الفيوم</option><option>المنيا</option><option>أسيوط</option>
+            <option>سوهاج</option><option>قنا</option><option>الأقصر</option>
+            <option>أسوان</option><option>البحر الأحمر</option><option>الوادي الجديد</option>
+            <option>مطروح</option><option>شمال سيناء</option><option>جنوب سيناء</option>
+        </select>
+
+        <input type="text" id="reg-facility" placeholder="اسم المنشأة التي تعمل بها">
+        
+        <select id="reg-shift">
+            <option value="">اختر الوردية</option>
+            <option value="صباحي">صباحي</option>
+            <option value="مسائي">مسائي</option>
+        </select>
+
+        <input type="password" id="reg-pass" placeholder="تعيين كلمة مرور">
+        
+        <button class="btn-reg" onclick="handleRegister()">إنشاء الحساب</button>
+        <span class="toggle-link" onclick="toggleAuth()">لديك حساب بالفعل؟ سجل دخول</span>
+    </div>
+
+    <div id="status"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // إعدادات Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyDgiNw5Dt6EkiokRjznzGkfZvVuDN0APPk",
+        authDomain: "uhia-attendancesystem.firebaseapp.com",
+        projectId: "uhia-attendancesystem",
+        storageBucket: "uhia-attendancesystem.firebasestorage.app",
+        messagingSenderId: "104444545133",
+        appId: "1:104444545133:web:f40607b93fb90a8f511764"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // التبديل بين الدخول والتسجيل
+    window.toggleAuth = () => {
+        document.getElementById('login-box').classList.toggle('hidden');
+        document.getElementById('reg-box').classList.toggle('hidden');
+        document.getElementById('status').style.display = 'none';
+    };
+
+    // معالجة التسجيل
+    window.handleRegister = async () => {
+        const id = document.getElementById('reg-id').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const name = document.getElementById('reg-name').value.trim();
+        const pass = document.getElementById('reg-pass').value.trim();
+        const gov = document.getElementById('reg-gov').value;
+        const fac = document.getElementById('reg-facility').value.trim();
+        const shift = document.getElementById('reg-shift').value;
+
+        // التحقق من الرقم القومي (14 رقم)
+        if (id.length !== 14 || isNaN(id)) {
+            return showStatus("الرقم القومي يجب أن يتكون من 14 رقم", "var(--error)");
+        }
+
+        // التحقق من رقم الهاتف (11 رقم)
+        if (phone.length !== 11 || isNaN(phone)) {
+            return showStatus("رقم الهاتف يجب أن يتكون من 11 رقم", "var(--error)");
+        }
+
+        // التحقق من الحقول الفارغة
+        if (!name || !pass || !gov || !fac || !shift) {
+            return showStatus("يرجى إكمال جميع الحقول", "var(--error)");
+        }
+
+        try {
+            showStatus("جاري معالجة البيانات...", "orange");
+            
+            // استخدام الرقم القومي كمعرف للمستند لمنع التكرار
+            await setDoc(doc(db, "UsersRegistry", id), {
+                fullName: name,
+                nationalID: id,
+                phoneNumber: phone,
+                governorate: gov,
+                facility: fac,
+                shift: shift,
+                password: pass,
+                createdAt: new Date()
+            });
+
+            showStatus("✅ تم تسجيل حسابك بنجاح!", "var(--secondary)");
+            setTimeout(toggleAuth, 2500);
+        } catch (e) {
+            console.error(e);
+            showStatus("❌ فشل التسجيل، تأكد من اتصال الإنترنت", "var(--error)");
+        }
+    };
+
+    // معالجة تسجيل الدخول
+    window.handleLogin = async () => {
+        const id = document.getElementById('login-id').value.trim();
+        const pass = document.getElementById('login-pass').value.trim();
+
+        if (id.length !== 14) {
+            return showStatus("يرجى إدخال الرقم القومي المكون من 14 رقم", "var(--error)");
+        }
+        if (!pass) return showStatus("يرجى إدخال كلمة المرور", "var(--error)");
+
+        try {
+            showStatus("جاري التحقق...", "orange");
+            const userSnap = await getDoc(doc(db, "UsersRegistry", id));
+
+            if (userSnap.exists() && userSnap.data().password === pass) {
+                // حفظ بيانات المستخدم في الجلسة لاستخدامها في صفحة البصمة
+                sessionStorage.setItem('userData', JSON.stringify(userSnap.data()));
+                showStatus("✅ تم تسجيل الدخول بنجاح", "var(--secondary)");
+                
+                // هنا نضع التوجيه للصفحة التالية مستقبلاً
+                alert("نجاح! سيتم نقلك لصفحة تسجيل البصمة الآن.");
+            } else {
+                showStatus("❌ الرقم القومي أو كلمة المرور غير صحيحة", "var(--error)");
+            }
+        } catch (e) {
+            showStatus("❌ فشل الاتصال بقاعدة البيانات", "var(--error)");
+        }
+    };
+
+    function showStatus(msg, color) {
+        const s = document.getElementById('status');
+        s.innerText = msg;
+        s.style.display = 'block';
+        s.style.color = color;
+        s.style.backgroundColor = color + "15"; // لون خلفية خفيف
+        s.style.border = "1px solid " + color;
+    }
+</script>
+
+</body>
+</html>
