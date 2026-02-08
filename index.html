@@ -246,8 +246,8 @@
                 showStatus("✅ تم تسجيل الدخول بنجاح", "var(--secondary)");
                 
                 // هنا نضع التوجيه للصفحة التالية مستقبلاً
-                alert("نجاح! سيتم نقلك لصفحة تسجيل البصمة الآن.");
-            } else {
+                window.location.href = "attendance.html";  } 
+                else {
                 showStatus("❌ الرقم القومي أو كلمة المرور غير صحيحة", "var(--error)");
             }
         } catch (e) {

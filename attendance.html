@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الحضور - UHIA</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root { --primary: #1a5276; --success: #28a745; --danger: #e74c3c; --bg: #f4f7f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .container { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        .user-info { background: #e8f4f8; padding: 15px; border-radius: 15px; margin-bottom: 20px; text-align: right; border-right: 5px solid var(--primary); }
+        .user-info h3 { margin: 0; color: var(--primary); font-size: 1.1rem; }
+        .user-info p { margin: 5px 0 0; color: #555; font-size: 0.9rem; }
+        
+        #video, #capturedImage { width: 100%; border-radius: 15px; background: #000; margin-top: 10px; display: block; }
+        #capturedImage { display: none; border: 4px solid var(--primary); }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 16px; color: white; }
+        .btn-photo { background: #6c757d; width: 100%; margin-bottom: 10px; }
+        .btn-in { background: var(--success); }
+        .btn-out { background: var(--danger); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #status { margin-top: 15px; padding: 12px; border-radius: 10px; display: none; font-weight: 500; }
+        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-left: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="user-info" id="userInfo">
+        <h3 id="uName">جاري تحميل البيانات...</h3>
+        <p id="uDetails"></p>
+    </div>
+
+    <div id="camera-section">
+        <video id="video" autoplay playsinline></video>
+        <img id="capturedImage">
+        <canvas id="canvas" style="display:none;"></canvas>
+        <button class="btn-photo" onclick="takePhoto()">
+            <span class="material-icons" style="vertical-align: middle;">photo_camera</span> التقاط صورة الشخصية
+        </button>
+    </div>
+
+    <div class="btn-group">
+        <button id="btnIn" class="btn-in" onclick="submitAttendance('دخول')" disabled>توقيع دخول</button>
+        <button id="btnOut" class="btn-out" onclick="submitAttendance('خروج')" disabled>توقيع خروج</button>
+    </div>
+
+    <div id="status"></div>
+    
+    <button onclick="logout()" style="background:none; color:#888; text-decoration:underline; margin-top:20px; font-size:14px; border:none;">تسجيل الخروج من الحساب</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, collection, addDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDgiNw5Dt6EkiokRjznzGkfZvVuDN0APPk",
+        authDomain: "uhia-attendancesystem.firebaseapp.com",
+        projectId: "uhia-attendancesystem",
+        storageBucket: "uhia-attendancesystem.firebasestorage.app",
+        messagingSenderId: "104444545133",
+        appId: "1:104444545133:web:f40607b93fb90a8f511764"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    let userData = JSON.parse(sessionStorage.getItem('userData'));
+    let imgData = null;
+
+    // التأكد من تسجيل الدخول
+    if (!userData) {
+        window.location.href = "index.html";
+    } else {
+        document.getElementById('uName').innerText = userData.fullName;
+        document.getElementById('uDetails').innerText = `${userData.facility} - ${userData.governorate} (${userData.shift})`;
+    }
+
+    // تشغيل الكاميرا
+    const video = document.getElementById('video');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(stream => video.srcObject = stream)
+        .catch(err => showStatus("يرجى السماح بصلاحية الكاميرا", "var(--danger)"));
+
+    window.takePhoto = () => {
+        const canvas = document.getElementById('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        imgData = canvas.toDataURL('image/jpeg', 0.5);
+        
+        video.style.display = 'none';
+        const imgTag = document.getElementById('capturedImage');
+        imgTag.src = imgData;
+        imgTag.style.display = 'block';
+        
+        document.getElementById('btnIn').disabled = false;
+        document.getElementById('btnOut').disabled = false;
+    };
+
+    window.submitAttendance = async (type) => {
+        showStatus("جاري تحديد الموقع وحفظ البيانات...", "orange", true);
+        
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+
+                // 1. رفع الصورة إلى Storage
+                const photoRef = ref(storage, `attendance_pics/${today}/${userData.nationalID}_${Date.now()}.jpg`);
+                await uploadString(photoRef, imgData, 'data_url');
+                const photoUrl = await getDownloadURL(photoRef);
+
+                // 2. حفظ البيانات في AttendanceLogs -> Date -> Transactions
+                const dateDocRef = doc(db, "AttendanceLogs", today);
+                await setDoc(dateDocRef, { lastUpdate: serverTimestamp() }, { merge: true });
+
+                await addDoc(collection(dateDocRef, "Transactions"), {
+                    fullName: userData.fullName,
+                    nationalID: userData.nationalID,
+                    phone: userData.phoneNumber,
+                    gov: userData.governorate,
+                    facility: userData.facility,
+                    shift: userData.shift,
+                    action: type,
+                    timestamp: serverTimestamp(),
+                    location: { lat, lng },
+                    googleMapsLink: `https://www.google.com/maps?q=${lat},${lng}`,
+                    photo: photoUrl
+                });
+
+                showStatus(`✅ تم تسجيل ${type} بنجاح!`, "var(--success)");
+                resetUI();
+            } catch (e) {
+                console.error(e);
+                showStatus("❌ فشل التسجيل، حاول مرة أخرى", "var(--danger)");
+            }
+        }, () => showStatus("❌ يجب تفعيل GPS لتسجيل الحضور", "var(--danger)"), {enableHighAccuracy: true});
+    };
+
+    function resetUI() {
+        imgData = null;
+        document.getElementById('capturedImage').style.display = 'none';
+        video.style.display = 'block';
+        document.getElementById('btnIn').disabled = true;
+        document.getElementById('btnOut').disabled = true;
+    }
+
+    function showStatus(msg, color, showSpinner = false) {
+        const s = document.getElementById('status');
+        s.style.display = 'block';
+        s.style.color = color;
+        s.style.backgroundColor = color + "15";
+        s.innerHTML = showSpinner ? `<div class="loading-spinner"></div> ${msg}` : msg;
+    }
+
+    window.logout = () => {
+        sessionStorage.clear();
+        window.location.href = "index.html";
+    };
+</script>
+
+</body>
+</html>
