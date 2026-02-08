@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UHIA - Smart Attendance System</title>
+    <title>تسجيل الدخول لمنظومه المنافذ الصحيه</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -216,7 +216,7 @@
         <div class="logo-placeholder">
             <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZP7dAnsdRJczRl9RZ7IfcQ_sCpiz4xCayow&s" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 14px;">
         </div>
-        <h1>نظام الحضور الذكي - UHIA</h1>
+        <h1>تسجيل الدخول لمنظومه المنافذ الصحيه</h1>
     </div>
 
     <div class="content-body">
@@ -225,10 +225,14 @@
             <div id="shift-display" class="shift-badge">جاري حساب الوردية...</div>
         </div>
 
-        <div class="input-group">
-            <label>المحافظة</label>
-            <select id="edit-gov" class="custom-select"></select>
-        </div>
+<div class="input-group">
+    <label>المنشأة الطبية</label>
+    <select id="edit-fac" class="custom-select" onchange="toggleOtherFac(this.value)"></select>
+    
+    <input type="text" id="new-fac-name" class="custom-input hidden" placeholder="أدخل اسم المنشأة الجديدة" style="margin-top:12px;" oninput="validateInputs()">
+    
+    <button id="add-fac-btn" class="add-fac-btn hidden" onclick="addNewFacility()">+ اعتماد هذه المنشأة في موقعي الحالي</button>
+</div>
 
         <div class="input-group">
             <label>المنشأة الطبية</label>
@@ -266,8 +270,8 @@
         </a>
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #e2e8f0; text-align: center; font-size: 0.8rem; color: #94a3b8;">
     <p style="margin: 5px 0;">جميع الحقوق محفوظة &copy; 2026 UHIA System</p>
-    <p style="margin: 5px 0;">للدعم الفني والتواصل:</p>
-    <a href="mailto:your-email@example.com" style="color: var(--secondary); text-decoration: none; font-weight: bold;">your-email@example.com</a>
+    <p style="margin: 5px 0;">في حاله وجود استفسار او شكاوي يرجي ارسال بريد الكتروني علي   :</p>
+    <a href="mailto:randa.abdo@uhia.gov.eg" style="color: var(--secondary); text-decoration: none; font-weight: bold;">your-email@example.com</a>
 </div>
     </div>
 </div>
@@ -505,6 +509,39 @@
         s.style.display = 'block'; s.innerText = m; s.style.color = c;
         s.style.backgroundColor = c + "1A"; s.style.border = "1px solid " + c;
     }
+    window.addNewFacility = async () => {
+    const gov = document.getElementById('edit-gov').value;
+    const fName = document.getElementById('new-fac-name').value.trim();
+    
+    if (!fName) return showStatus("اكتب اسم المنشأة أولاً", "var(--danger)");
+
+    showStatus("جاري تحديد الموقع بدقة لتعريف المنشأة...", "var(--warning)");
+    
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        // إنشاء معرّف فريد للمنشأة (المحافظة + الاسم)
+        const facID = `${gov}-${fName}`.replace(/\s+/g, '_');
+        
+        try {
+            await setDoc(doc(db, "FacilitiesReference", facID), {
+                facilityName: fName,
+                governorate: gov,
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                addedBy: userData.fullName,
+                timestamp: serverTimestamp()
+            });
+            
+            showStatus("تم اعتماد المنشأة بنجاح في موقعك الحالي", "var(--success)");
+            
+            // إعادة تحديث القائمة واختيار المنشأة الجديدة تلقائياً
+            window.loadFacilities(gov, fName);
+            
+        } catch (error) {
+            showStatus("خطأ في الحفظ: " + error.message, "var(--danger)");
+        }
+    }, () => showStatus("فشل تحديد الموقع، تأكد من تفعيل GPS", "var(--danger)"), 
+    { enableHighAccuracy: true });
+};
 
     window.logout = () => { sessionStorage.clear(); location.href = "index.html"; };
 </script>

@@ -298,42 +298,86 @@
         document.getElementById('reg-fac-other').classList.toggle('hidden', val !== 'other');
     };
 
-    window.handleRegister = async () => {
-        const id = document.getElementById('reg-id').value.trim();
-        const phone = document.getElementById('reg-phone').value.trim();
-        const name = document.getElementById('reg-name').value.trim();
-        const pass = document.getElementById('reg-pass').value.trim();
-        const gov = document.getElementById('reg-gov').value;
-        const shift = document.getElementById('reg-shift').value;
-        let fac = document.getElementById('reg-fac-select').value;
-        if (fac === 'other') fac = document.getElementById('reg-fac-other').value.trim();
+ window.handleRegister = async () => {
+    const id = document.getElementById('reg-id').value.trim();
+    const phone = document.getElementById('reg-phone').value.trim();
+    const name = document.getElementById('reg-name').value.trim();
+    const pass = document.getElementById('reg-pass').value.trim();
+    const gov = document.getElementById('reg-gov').value;
+    const shift = document.getElementById('reg-shift').value;
+    let facSelectValue = document.getElementById('reg-fac-select').value;
+    let facName = facSelectValue === 'other' ? document.getElementById('reg-fac-other').value.trim() : facSelectValue;
 
-        if (id.length !== 14 || phone.length !== 11 || !fac || !name || !pass) {
-            return showStatus("يرجى التأكد من كافة البيانات", "var(--danger)");
+    // التحقق من الحقول
+    if (id.length !== 14 || phone.length !== 11 || !facName || !name || !pass || !gov) {
+        return showStatus("يرجى التأكد من كافة البيانات واختيار المنشأة", "var(--danger)");
+    }
+
+    try {
+        showStatus("جاري تحديد موقع المنشأة والتحقق...", "var(--warning)");
+
+        // دالة للحصول على الموقع الجغرافي
+        const getPosition = () => {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 10000
+                });
+            });
+        };
+
+        let currentLat = 0;
+        let currentLng = 0;
+
+        // إذا كانت المنشأة جديدة، نأخذ إحداثيات المستخدم الحالية كإحداثيات للمقر
+        if (facSelectValue === 'other') {
+            try {
+                const pos = await getPosition();
+                currentLat = pos.coords.latitude;
+                currentLng = pos.coords.longitude;
+            } catch (geoErr) {
+                return showStatus("يجب السماح بالوصول للموقع لتسجيل منشأة جديدة", "var(--danger)");
+            }
         }
 
-        try {
-            showStatus("جاري معالجة طلبك...", "var(--warning)");
-            await setDoc(doc(db, "UsersRegistry", id), {
-                fullName: name, nationalID: id, phoneNumber: phone,
-                governorate: gov, facility: fac, shift: shift, password: pass
+        // 1. تسجيل المستخدم في نظام المستخدمين
+        await setDoc(doc(db, "UsersRegistry", id), {
+            fullName: name, 
+            nationalID: id, 
+            phoneNumber: phone,
+            governorate: gov, 
+            facility: facName, 
+            shift: shift, 
+            password: pass,
+            role: 'user' // تحديد الدور الافتراضي
+        });
+
+        const facDocID = `${gov}-${facName}`.replace(/\s+/g, '_');
+        const facRef = doc(db, "FacilitiesReference", facDocID);
+        const facSnap = await getDoc(facRef);
+        const newStaff = { name: name, phone: phone, nationalID: id };
+
+        if (facSnap.exists()) {
+            // إذا كانت المنشأة موجودة مسبقاً، نكتفي بإضافة الموظف للقائمة
+            await updateDoc(facRef, { staffList: arrayUnion(newStaff) });
+        } else {
+            // إذا كانت جديدة، ننشئها بالإحداثيات التي التقطناها
+            await setDoc(facRef, { 
+                facilityName: facName, 
+                governorate: gov, 
+                lat: currentLat, 
+                lng: currentLng, 
+                staffList: [newStaff] 
             });
+        }
 
-            const facDocID = `${gov}-${fac}`.replace(/\s+/g, '_');
-            const facRef = doc(db, "FacilitiesReference", facDocID);
-            const facSnap = await getDoc(facRef);
-            const newStaff = { name: name, phone: phone, nationalID: id };
-
-            if (facSnap.exists()) {
-                await updateDoc(facRef, { staffList: arrayUnion(newStaff) });
-            } else {
-                await setDoc(facRef, { facilityName: fac, governorate: gov, lat: 0, lng: 0, staffList: [newStaff] });
-            }
-            showStatus(" تم التسجيل بنجاح!", "var(--success)");
-            // setTimeout(toggleAuth, 2000);
-        } catch (e) { showStatus(" حدث خطأ أثناء التسجيل", "var(--danger)"); }
-    };
-
+        showStatus("تم التسجيل بنجاح! يمكنك الآن تسجيل الدخول.", "var(--success)");
+        setTimeout(toggleAuth, 20); // العودة لصفحة الدخول بعد النجاح
+    } catch (e) { 
+        console.error(e);
+        showStatus("حدث خطأ أثناء التسجيل: " + e.message, "var(--danger)"); 
+    }
+};
 window.handleLogin = async () => {
     const id = document.getElementById('login-id').value.trim(); // سيقبل "uhia" أو الرقم القومي
     const pass = document.getElementById('login-pass').value.trim();
