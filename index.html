@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منظومة UHIA - تسجيل الدخول</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root { --primary: #1a5276; --secondary: #28a745; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; }
+        .auth-card { background: white; width: 100%; max-width: 400px; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        .logo { width: 120px; margin-bottom: 1rem; }
+        h2 { color: var(--primary); margin-bottom: 1.5rem; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; margin-top: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 16px; }
+        .btn-login { background: var(--primary); color: white; }
+        .btn-reg { background: var(--secondary); color: white; }
+        .toggle-link { margin-top: 1rem; color: var(--primary); cursor: pointer; text-decoration: underline; font-size: 14px; display: block; }
+        .hidden { display: none; }
+        #status { margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 14px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <img src="https://th.bing.com/th/id/R.59d5ce0fdd736c17f99baf306040b306?rik=i9YpNmQIDemEVQ&riu=http%3a%2f%2fwww.alistech-eg.com%2fimg%2fclients-logo%2fuhia.png" class="logo" alt="UHIA">
+    
+    <div id="login-box">
+        <h2>تسجيل الدخول</h2>
+        <input type="email" id="login-email" placeholder="البريد الإلكتروني">
+        <input type="password" id="login-pass" placeholder="كلمة المرور">
+        <button class="btn-login" onclick="handleLogin()">دخول</button>
+        <span class="toggle-link" onclick="toggleAuth()">ليس لديك حساب؟ سجل الآن</span>
+    </div>
+
+    <div id="reg-box" class="hidden">
+        <h2>حساب جديد</h2>
+        <input type="text" id="reg-name" placeholder="الاسم الرباعي">
+        <input type="text" id="reg-id" placeholder="الرقم القومي">
+        <input type="email" id="reg-email" placeholder="البريد الإلكتروني">
+        <input type="password" id="reg-pass" placeholder="كلمة المرور">
+        <select id="reg-gov">
+            <option value="">اختر المحافظة</option>
+            <option value="Suez">السويس</option>
+            <option value="PortSaid">بورسعيد</option>
+        </select>
+        <button class="btn-reg" onclick="handleRegister()">إنشاء حساب</button>
+        <span class="toggle-link" onclick="toggleAuth()">لديك حساب بالفعل؟ سجل دخول</span>
+    </div>
+
+    <div id="status"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDgiNw5Dt6EkiokRjznzGkfZvVuDN0APPk",
+        authDomain: "uhia-attendancesystem.firebaseapp.com",
+        projectId: "uhia-attendancesystem",
+        storageBucket: "uhia-attendancesystem.firebasestorage.app",
+        messagingSenderId: "104444545133",
+        appId: "1:104444545133:web:f40607b93fb90a8f511764"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Toggle UI
+    window.toggleAuth = () => {
+        document.getElementById('login-box').classList.toggle('hidden');
+        document.getElementById('reg-box').classList.toggle('hidden');
+        document.getElementById('status').style.display = 'none';
+    };
+
+    // Register User
+    window.handleRegister = async () => {
+        const email = document.getElementById('reg-email').value;
+        const name = document.getElementById('reg-name').value;
+        const pass = document.getElementById('reg-pass').value;
+        
+        if(!email || !pass || !name) return showStatus("يرجى ملء البيانات", "red");
+
+        const userID = email.replace(/\./g, '_'); // IDs can't have dots
+        try {
+            await setDoc(doc(db, "UsersRegistry", userID), {
+                name,
+                email,
+                password: pass, // In production, never store passwords in plain text
+                nationalID: document.getElementById('reg-id').value,
+                gov: document.getElementById('reg-gov').value,
+                createdAt: new Date()
+            });
+            showStatus("✅ تم إنشاء الحساب! يمكنك الدخول الآن", "green");
+            setTimeout(toggleAuth, 2000);
+        } catch (e) { showStatus("❌ خطأ في التسجيل", "red"); }
+    };
+
+    // Login User
+    window.handleLogin = async () => {
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-pass').value;
+        const userID = email.replace(/\./g, '_');
+
+        try {
+            const userSnap = await getDoc(doc(db, "UsersRegistry", userID));
+            if (userSnap.exists() && userSnap.data().password === pass) {
+                showStatus("✅ جاري التحويل...", "green");
+                // Save user data to session and redirect
+                sessionStorage.setItem('user', JSON.stringify(userSnap.data()));
+                alert("Login Success! Next: Attendance Page");
+            } else {
+                showStatus("❌ خطأ في البريد أو كلمة المرور", "red");
+            }
+        } catch (e) { showStatus("❌ فشل الاتصال", "red"); }
+    };
+
+    function showStatus(msg, color) {
+        const s = document.getElementById('status');
+        s.innerText = msg;
+        s.style.display = 'block';
+        s.style.color = color;
+    }
+</script>
+</body>
+</html>
