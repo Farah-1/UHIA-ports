@@ -3,61 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الحضور - UHIA</title>
+    <title>تسجيل الحضور السريع - UHIA</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         :root { --primary: #1a5276; --success: #28a745; --danger: #e74c3c; --bg: #f4f7f9; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; justify-content: center; }
         .container { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
-        
-        /* تحسين عرض البيانات القابلة للتعديل */
-        .user-info { background: #e8f4f8; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: right; border-right: 5px solid var(--primary); }
-        .user-info h3 { margin: 0 0 15px 0; color: var(--primary); border-bottom: 1px solid #cde4ee; padding-bottom: 10px; }
+        .user-info { background: #e8f4f8; padding: 15px; border-radius: 15px; margin-bottom: 20px; text-align: right; border-right: 5px solid var(--primary); }
         .form-group { margin-bottom: 10px; }
         .form-group label { display: block; font-size: 0.8rem; color: #666; margin-bottom: 3px; }
-        .edit-select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #bed3dd; background: white; font-size: 0.9rem; }
-
+        .edit-select, .edit-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #bed3dd; background: white; font-size: 0.9rem; box-sizing: border-box; }
         #video, #capturedImage { width: 100%; border-radius: 15px; background: #000; margin-top: 10px; display: block; }
         #capturedImage { display: none; border: 4px solid var(--primary); }
-        
         .btn-group { display: flex; gap: 10px; margin-top: 20px; }
         button { flex: 1; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 16px; color: white; }
         .btn-photo { background: #6c757d; width: 100%; margin-bottom: 10px; }
         .btn-in { background: var(--success); }
         .btn-out { background: var(--danger); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        #status { margin-top: 15px; padding: 12px; border-radius: 10px; display: none; font-weight: 500; }
-        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-left: 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden { display: none; }
+        #status { margin-top: 15px; padding: 12px; border-radius: 10px; display: none; font-weight: 500; font-size: 14px; line-height: 1.5; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="user-info">
-        <h3 id="uName">مرحباً ..</h3>
-        
+        <h3 id="uName">جاري التحميل...</h3>
         <div class="form-group">
-            <label>المحافظة الحالية:</label>
-            <select id="edit-gov" class="edit-select" onchange="loadFacilities(this.value)">
-                <option>القاهرة</option><option>الجيزة</option><option>الإسكندرية</option>
-                <option>بورسعيد</option><option>السويس</option><option>الإسماعيلية</option>
-                <option>الدقهلية</option><option>القليوبية</option><option>الشرقية</option>
-                <option>الغربية</option><option>المنوفية</option><option>البحيرة</option>
-                <option>كفر الشيخ</option><option>دمياط</option><option>بني سويف</option>
-                <option>الفيوم</option><option>المنيا</option><option>أسيوط</option>
-                <option>سوهاج</option><option>قنا</option><option>الأقصر</option>
-                <option>أسوان</option><option>البحر الأحمر</option><option>الوادي الجديد</option>
-                <option>مطروح</option><option>شمال سيناء</option><option>جنوب سيناء</option>
-            </select>
+            <label>المحافظة:</label>
+            <select id="edit-gov" class="edit-select" onchange="loadFacilities(this.value)"></select>
         </div>
-
         <div class="form-group">
             <label>المنشأة:</label>
-            <select id="edit-fac" class="edit-select"></select>
+            <select id="edit-fac" class="edit-select" onchange="toggleOtherFac(this.value)"></select>
+            <input type="text" id="new-fac-name" class="edit-input hidden" placeholder="اسم المنشأة الجديدة" style="margin-top:5px;">
         </div>
-
         <div class="form-group">
             <label>الوردية:</label>
             <select id="edit-shift" class="edit-select">
@@ -72,24 +52,21 @@
         <img id="capturedImage">
         <canvas id="canvas" style="display:none;"></canvas>
         <button class="btn-photo" onclick="takePhoto()">
-            <span class="material-icons" style="vertical-align: middle;">photo_camera</span> التقاط صورة الشخصية
+            <span class="material-icons" style="vertical-align: middle;">photo_camera</span> التقاط الصورة
         </button>
     </div>
 
     <div class="btn-group">
-        <button id="btnIn" class="btn-in" onclick="submitAttendance('دخول')" disabled>توقيع دخول</button>
-        <button id="btnOut" class="btn-out" onclick="submitAttendance('خروج')" disabled>توقيع خروج</button>
+        <button id="btnIn" class="btn-in" onclick="submitProcess('دخول')" disabled>توقيع دخول</button>
+        <button id="btnOut" class="btn-out" onclick="submitProcess('خروج')" disabled>توقيع خروج</button>
     </div>
 
     <div id="status"></div>
-    
-    <button onclick="logout()" style="background:none; color:#888; text-decoration:underline; margin-top:20px; font-size:14px; border:none;">تسجيل الخروج من الحساب</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, collection, addDoc, setDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+    import { getFirestore, doc, collection, addDoc, setDoc, getDoc, getDocs, query, where, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDgiNw5Dt6EkiokRjznzGkfZvVuDN0APPk",
@@ -102,61 +79,61 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
     let userData = JSON.parse(sessionStorage.getItem('userData'));
     let imgData = null;
-    let currentPos = null;
 
-    // 1. التأكد من تسجيل الدخول وملء البيانات الافتراضية
-    if (!userData) {
-        window.location.href = "index.html";
-    } else {
-        document.getElementById('uName').innerText = `مرحباً، ${userData.fullName.split(' ')[0]}`;
-        document.getElementById('edit-gov').value = userData.governorate;
-        document.getElementById('edit-shift').value = userData.shift;
+    window.onload = () => {
+        if (!userData) { window.location.href = "index.html"; return; }
+        document.getElementById('uName').innerText = `مرحباً، ${userData.fullName}`;
+        
+        const govs = ["القاهرة", "الجيزة", "الإسكندرية", "بورسعيد", "السويس", "الإسماعيلية", "البحيرة", "دمياط", "الشرقية", "الغربية", "المنوفية", "الدقهلية", "الفيوم", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان"];
+        const gSelect = document.getElementById('edit-gov');
+        govs.forEach(g => gSelect.add(new Option(g, g)));
+        gSelect.value = userData.governorate;
+        
         loadFacilities(userData.governorate, userData.facility);
+        startCamera();
+    };
+
+    // حل مشكلة الكاميرا: محاولة الوضع الأمامي ثم الوضع التلقائي في حال الفشل
+    async function startCamera() {
+        const video = document.getElementById('video');
+        const constraints = [
+            { video: { facingMode: "user" } }, // محاولة الكاميرا الأمامية
+            { video: true } // محاولة أي كاميرا متاحة
+        ];
+
+        for (let constraint of constraints) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraint);
+                video.srcObject = stream;
+                return;
+            } catch (e) { console.log("Retrying camera..."); }
+        }
+        showStatus("لم يتم العثور على كاميرا. تأكد من توصيلها ومنح الصلاحية.", "red");
     }
 
-    // 2. جلب الموقع مسبقاً للسرعة
-    const preloadLocation = () => {
-        navigator.geolocation.getCurrentPosition(p => currentPos = p, null, {enableHighAccuracy: false});
-    };
-    preloadLocation();
-
-    // 3. تحميل المنشآت بناءً على المحافظة
     window.loadFacilities = async (gov, defaultFac = "") => {
-        const facSelect = document.getElementById('edit-fac');
-        facSelect.innerHTML = '<option>جاري التحميل...</option>';
-        
-        try {
-            const q = query(collection(db, "FacilitiesReference"), where("governorate", "==", gov));
-            const snap = await getDocs(q);
-            facSelect.innerHTML = '';
-            
-            snap.forEach(doc => {
-                const fName = doc.data().facilityName;
-                let opt = new Option(fName, fName);
-                if(fName === defaultFac) opt.selected = true;
-                facSelect.add(opt);
-            });
-            
-            if (facSelect.options.length === 0) {
-                facSelect.add(new Option(userData.facility, userData.facility));
-            }
-        } catch (e) { facSelect.innerHTML = '<option>خطأ في التحميل</option>'; }
+        const fSelect = document.getElementById('edit-fac');
+        fSelect.innerHTML = '<option>جاري التحميل...</option>';
+        const q = query(collection(db, "FacilitiesReference"), where("governorate", "==", gov));
+        const snap = await getDocs(q);
+        fSelect.innerHTML = '';
+        snap.forEach(d => fSelect.add(new Option(d.data().facilityName, d.data().facilityName)));
+        fSelect.add(new Option("-- أخرى (منشأة جديدة) --", "other"));
+        if (defaultFac) fSelect.value = defaultFac;
     };
 
-    // 4. تشغيل الكاميرا
-    const video = document.getElementById('video');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-        .then(stream => video.srcObject = stream);
+    window.toggleOtherFac = (v) => document.getElementById('new-fac-name').classList.toggle('hidden', v !== 'other');
 
     window.takePhoto = () => {
+        const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        imgData = canvas.toDataURL('image/jpeg', 0.5);
+        // تصغير الحجم لضمان بقاء الصورة تحت 1 ميجابايت (Base64)
+        canvas.width = 300; canvas.height = 300;
+        canvas.getContext('2d').drawImage(video, 0, 0, 300, 300);
+        imgData = canvas.toDataURL('image/jpeg', 0.4); // جودة 40% كافية جداً
         video.style.display = 'none';
         document.getElementById('capturedImage').src = imgData;
         document.getElementById('capturedImage').style.display = 'block';
@@ -164,76 +141,64 @@
         document.getElementById('btnOut').disabled = false;
     };
 
-    // 5. إرسال البصمة (التعديل الخاص بالسرعة والبيانات الحالية)
-    window.submitAttendance = async (type) => {
-        showStatus("جاري الحفظ السريع...", "orange", true);
-        
-        const getLocation = () => {
-            return new Promise((res) => {
-                if(currentPos) res(currentPos);
-                navigator.geolocation.getCurrentPosition(res, () => res({coords:{latitude:0,longitude:0}}), {timeout:5000});
-            });
-        };
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2-lat1)*Math.PI/180;
+        const dLon = (lon2-lon1)*Math.PI/180;
+        const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
 
-        try {
-            const today = new Date().toISOString().split('T')[0];
-            const activeGov = document.getElementById('edit-gov').value;
-            const activeFac = document.getElementById('edit-fac').value;
-            const activeShift = document.getElementById('edit-shift').value;
+    window.submitProcess = async (type) => {
+        showStatus("جاري التحقق والحفظ السريع...", "orange");
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                const uLat = pos.coords.latitude;
+                const uLng = pos.coords.longitude;
+                const today = new Date().toISOString().split('T')[0];
+                let fName = document.getElementById('edit-fac').value;
+                if (fName === 'other') fName = document.getElementById('new-fac-name').value;
 
-            // رفع الصورة وجلب الموقع في نفس الوقت
-            const photoRef = ref(storage, `attendance_pics/${today}/${userData.nationalID}_${Date.now()}.jpg`);
-            const [pos, uploadTask] = await Promise.all([
-                getLocation(),
-                uploadString(photoRef, imgData, 'data_url')
-            ]);
+                const facID = `${document.getElementById('edit-gov').value}-${fName}`.replace(/\s+/g, '_');
+                const facRef = doc(db, "FacilitiesReference", facID);
+                const facSnap = await getDoc(facRef);
 
-            const photoUrl = await getDownloadURL(photoRef);
-            const { latitude: lat, longitude: lng } = pos.coords;
+                // تحديث موقع المنشأة إذا كان فارغاً
+                if (!facSnap.exists()) {
+                    await setDoc(facRef, { facilityName: fName, governorate: document.getElementById('edit-gov').value, lat: uLat, lng: uLng });
+                } else if (facSnap.data().lat === 0 || !facSnap.data().lat) {
+                    await updateDoc(facRef, { lat: uLat, lng: uLng });
+                } else {
+                    const dist = getDistance(uLat, uLng, facSnap.data().lat, facSnap.data().lng);
+                    if (dist > 1) return showStatus(`خطأ: أنت بعيد عن المنشأة بمقدار ${dist.toFixed(2)} كم. الحد المسموح 1 كم.`, "red");
+                }
 
-            // حفظ في الجدول الثاني (سجل الحركات)
-            const dateDocRef = doc(db, "AttendanceLogs", today);
-            await setDoc(dateDocRef, { lastUpdate: serverTimestamp() }, { merge: true });
+                // منع التكرار
+                const qCheck = query(collection(db, "AttendanceLogs", today, "Transactions"), where("nationalID", "==", userData.nationalID), where("action", "==", type));
+                const snapCheck = await getDocs(qCheck);
+                if (!snapCheck.empty) return showStatus(`لقد سجلت ${type} بالفعل اليوم!`, "red");
 
-            await addDoc(collection(dateDocRef, "Transactions"), {
-                fullName: userData.fullName,
-                nationalID: userData.nationalID,
-                phone: userData.phoneNumber,
-                gov: activeGov,
-                facility: activeFac,
-                shift: activeShift,
-                action: type,
-                timestamp: serverTimestamp(),
-                location: { lat, lng },
-                googleMapsLink: lat !== 0 ? `https://www.google.com/maps?q=${lat},${lng}` : "غير متاح",
-                photo: photoUrl
-            });
+                // الحفظ المباشر (Base64)
+                await addDoc(collection(db, "AttendanceLogs", today, "Transactions"), {
+                    fullName: userData.fullName,
+                    nationalID: userData.nationalID,
+                    action: type,
+                    facility: fName,
+                    timestamp: serverTimestamp(),
+                    photoBase64: imgData,
+                    location: { lat: uLat, lng: uLng }
+                });
 
-            showStatus(`✅ تم تسجيل ${type} بنجاح!`, "var(--success)");
-            setTimeout(resetUI, 2000);
-        } catch (e) {
-            showStatus("❌ فشل الحفظ، حاول ثانية", "var(--danger)");
-        }
+                showStatus(`✅ تم تسجيل ${type} بنجاح!`, "green");
+                setTimeout(() => location.reload(), 2000);
+            } catch (e) { showStatus("فشل الحفظ: " + e.message, "red"); }
+        }, () => showStatus("يجب تفعيل GPS", "red"), { enableHighAccuracy: true });
     };
 
-    function resetUI() {
-        imgData = null;
-        document.getElementById('capturedImage').style.display = 'none';
-        video.style.display = 'block';
-        document.getElementById('btnIn').disabled = true;
-        document.getElementById('btnOut').disabled = true;
-        document.getElementById('status').style.display = 'none';
-    }
-
-    function showStatus(msg, color, showSpinner = false) {
+    function showStatus(m, c) {
         const s = document.getElementById('status');
-        s.style.display = 'block'; s.style.color = color;
-        s.style.backgroundColor = color + "15";
-        s.innerHTML = showSpinner ? `<div class="loading-spinner"></div> ${msg}` : msg;
+        s.style.display = 'block'; s.innerText = m; s.style.color = c; s.style.backgroundColor = c + "15";
     }
-
-    window.logout = () => { sessionStorage.clear(); window.location.href = "index.html"; };
 </script>
-
 </body>
 </html>
