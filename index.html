@@ -330,26 +330,43 @@
                 await setDoc(facRef, { facilityName: fac, governorate: gov, lat: 0, lng: 0, staffList: [newStaff] });
             }
             showStatus(" تم التسجيل بنجاح!", "var(--success)");
-            setTimeout(toggleAuth, 2000);
+            // setTimeout(toggleAuth, 2000);
         } catch (e) { showStatus(" حدث خطأ أثناء التسجيل", "var(--danger)"); }
     };
 
-    window.handleLogin = async () => {
-        const id = document.getElementById('login-id').value.trim();
-        const pass = document.getElementById('login-pass').value.trim();
-        if(!id || !pass) return showStatus("يرجى إدخال البيانات", "var(--danger)");
+window.handleLogin = async () => {
+    const id = document.getElementById('login-id').value.trim(); // سيقبل "uhia" أو الرقم القومي
+    const pass = document.getElementById('login-pass').value.trim();
+    
+    if(!id || !pass) return showStatus("يرجى إدخال البيانات", "var(--danger)");
 
-        try {
-            showStatus("جاري التحقق...", "var(--warning)");
-            const userSnap = await getDoc(doc(db, "UsersRegistry", id));
-            if (userSnap.exists() && userSnap.data().password === pass) {
-                sessionStorage.setItem('userData', JSON.stringify(userSnap.data()));
-                window.location.href = "attendance.html"; 
+    try {
+        showStatus("جاري التحقق...", "var(--warning)");
+        // البحث عن المستند باستخدام المعرف (سواء كان uhia أو رقم قومي)
+        const userSnap = await getDoc(doc(db, "UsersRegistry", id));
+        
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            if (userData.password === pass) {
+                sessionStorage.setItem('userData', JSON.stringify(userData));
+                
+                // التوجيه بناءً على الرتبة
+                if (userData.role === 'admin') {
+                    window.location.href = "admin.html"; 
+                } else {
+                    window.location.href = "attendance.html";
+                }
             } else {
-                showStatus(" بيانات الدخول غير صحيحة", "var(--danger)");
+                showStatus("كلمة المرور غير صحيحة", "var(--danger)");
             }
-        } catch (e) { showStatus(" فشل الاتصال بالخادم", "var(--danger)"); }
-    };
+        } else {
+            showStatus("اسم المستخدم أو الرقم القومي غير مسجل", "var(--danger)");
+        }
+    } catch (e) { 
+        console.error(e);
+        showStatus("فشل الاتصال بالخادم", "var(--danger)"); 
+    }
+};
 
     function showStatus(msg, color) {
         const s = document.getElementById('status');

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UHIA - Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --admin-bg: #f1f5f9;
+            --primary: #1e3a8a;
+            --white: #ffffff;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--admin-bg);
+            margin: 0;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: var(--primary);
+            height: 100vh;
+            color: white;
+            position: fixed;
+            padding: 20px;
+        }
+
+        .sidebar h2 { text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 20px; }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+            border-radius: 10px;
+        }
+
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        .main-content {
+            margin-right: 250px;
+            width: calc(100% - 250px);
+            padding: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .stat-card h3 { margin: 0; color: #64748b; font-size: 0.9rem; }
+        .stat-card p { margin: 10px 0 0; font-size: 1.8rem; font-weight: bold; color: var(--primary); }
+
+        /* Table Style */
+        .data-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th { background: #f8fafc; text-align: right; padding: 15px; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 15px; border-bottom: 1px solid #e2e8f0; }
+
+        .btn-delete { color: var(--danger); cursor: pointer; border: none; background: none; }
+        
+        .search-bar {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            z-index: 1000;
+            width: 400px;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .btn-add {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>UHIA الأدمن</h2>
+    <div class="nav-item active" onclick="showSection('attendance')"><i class="material-icons">list</i> سجلات الحضور</div>
+    <div class="nav-item" onclick="showSection('facilities')"><i class="material-icons">business</i> إدارة المنشآت</div>
+    <div class="nav-item" onclick="showSection('users')"><i class="material-icons">people</i> إدارة المستخدمين</div>
+    <div class="nav-item" style="margin-top: auto; color: #fda4af;" onclick="location.href='attendance.html'"><i class="material-icons">arrow_back</i> العودة للنظام</div>
+</div>
+
+<div class="main-content">
+    <div class="stats-grid">
+        <div class="stat-card"><h3>حضور اليوم</h3><p id="stat-today">0</p></div>
+        <div class="stat-card"><h3>إجمالي المنشآت</h3><p id="stat-fac">0</p></div>
+        <div class="stat-card"><h3>الموظفين المسجلين</h3><p id="stat-users">0</p></div>
+    </div>
+
+    <div id="sec-attendance" class="data-container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>سجلات الحضور والغياب</h2>
+            <button class="btn-add" onclick="exportData()">تصدير Excel</button>
+        </div>
+        <input type="text" id="search-attendance" class="search-bar" placeholder="ابحث بالرقم القومي أو الاسم..." onkeyup="filterAttendance()">
+        <table>
+            <thead>
+                <tr>
+                    <th>الموظف</th>
+                    <th>المنشأة</th>
+                    <th>الوردية</th>
+                    <th>دخول</th>
+                    <th>خروج</th>
+                    <th>المدة</th>
+                    <th>إجراء</th>
+                </tr>
+            </thead>
+            <tbody id="attendance-table"></tbody>
+        </table>
+    </div>
+
+    <div id="sec-facilities" class="data-container" style="display:none;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>إدارة المنشآت</h2>
+            <button class="btn-add" onclick="openModal('fac-modal')">+ إضافة منشأة</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>اسم المنشأة</th>
+                    <th>المحافظة</th>
+                    <th>الإحداثيات (Lat, Lng)</th>
+                    <th>إجراء</th>
+                </tr>
+            </thead>
+            <tbody id="facilities-table"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="overlay" class="overlay" onclick="closeModal()"></div>
+<div id="fac-modal" class="modal">
+    <h3>إضافة منشأة جديدة</h3>
+    <input type="text" id="m-fac-name" placeholder="اسم المنشأة">
+    <select id="m-fac-gov">
+        <option value="القاهرة">القاهرة</option>
+        <option value="الجيزة">الجيزة</option>
+        <option value="الإسكندرية">الإسكندرية</option>
+    </select>
+    <input type="number" id="m-fac-lat" placeholder="خط العرض (Lat)">
+    <input type="number" id="m-fac-lng" placeholder="خط الطول (Lng)">
+    <button class="btn-add" style="width:100%" onclick="saveFacility()">حفظ المنشأة</button>
+</div>
+
+<script type="module">
+    window.onload = () => {
+    let user = JSON.parse(sessionStorage.getItem('userData'));
+    // إذا لم يكن مسجل دخول أو لم يكن دوره أدمن، يتم طرده لصفحة الدخول
+    if (!user || user.role !== 'admin') {
+        alert("عذراً، لا تملك صلاحية الوصول لهذه الصفحة");
+        window.location.href = "index.html";
+    }
+};
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, deleteDoc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDgiNw5Dt6EkiokRjznzGkfZvVuDN0APPk",
+        authDomain: "uhia-attendancesystem.firebaseapp.com",
+        projectId: "uhia-attendancesystem",
+        storageBucket: "uhia-attendancesystem.firebasestorage.app",
+        messagingSenderId: "104444545133",
+        appId: "1:104444545133:web:f40607b93fb90a8f511764"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- Loading Data ---
+    async function loadAttendance() {
+        const q = query(collection(db, "AttendanceLogs"), orderBy("loginTime", "desc"));
+        const snap = await getDocs(q);
+        const table = document.getElementById('attendance-table');
+        table.innerHTML = "";
+        
+        document.getElementById('stat-today').innerText = snap.size;
+
+        snap.forEach(d => {
+            const data = d.data();
+            const row = `<tr>
+                <td>${data.fullName}<br><small>${data.nationalID}</small></td>
+                <td>${data.facility}</td>
+                <td>${data.shift}</td>
+                <td>${data.loginTime ? data.loginTime.toDate().toLocaleTimeString('ar-EG') : '-'}</td>
+                <td>${data.logoutTime ? data.logoutTime.toDate().toLocaleTimeString('ar-EG') : 'نشط حالياً'}</td>
+                <td>${data.workDuration || '-'}</td>
+                <td><button class="btn-delete" onclick="deleteRecord('AttendanceLogs', '${d.id}')">حذف</button></td>
+            </tr>`;
+            table.innerHTML += row;
+        });
+    }
+
+    async function loadFacilities() {
+        const snap = await getDocs(collection(db, "FacilitiesReference"));
+        const table = document.getElementById('facilities-table');
+        table.innerHTML = "";
+        document.getElementById('stat-fac').innerText = snap.size;
+
+        snap.forEach(d => {
+            const data = d.data();
+            table.innerHTML += `<tr>
+                <td>${data.facilityName}</td>
+                <td>${data.governorate}</td>
+                <td>${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}</td>
+                <td><button class="btn-delete" onclick="deleteRecord('FacilitiesReference', '${d.id}')">حذف</button></td>
+            </tr>`;
+        });
+    }
+
+    // --- Actions ---
+    window.deleteRecord = async (col, id) => {
+        if(confirm("هل أنت متأكد من الحذف؟")) {
+            await deleteDoc(doc(db, col, id));
+            location.reload();
+        }
+    };
+
+    window.saveFacility = async () => {
+        const name = document.getElementById('m-fac-name').value;
+        const gov = document.getElementById('m-fac-gov').value;
+        const lat = parseFloat(document.getElementById('m-fac-lat').value);
+        const lng = parseFloat(document.getElementById('m-fac-lng').value);
+        
+        const id = `${gov}-${name}`.replace(/\s+/g, '_');
+        await setDoc(doc(db, "FacilitiesReference", id), {
+            facilityName: name, governorate: gov, lat: lat, lng: lng
+        });
+        alert("تمت الإضافة");
+        location.reload();
+    };
+
+    // --- Navigation ---
+    window.showSection = (section) => {
+        document.getElementById('sec-attendance').style.display = section === 'attendance' ? 'block' : 'none';
+        document.getElementById('sec-facilities').style.display = section === 'facilities' ? 'block' : 'none';
+        
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+    };
+
+    window.openModal = (id) => {
+        document.getElementById(id).style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+    };
+
+    window.closeModal = () => {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        document.getElementById('overlay').style.display = 'none';
+    };
+
+    // --- Init ---
+    window.onload = () => {
+        loadAttendance();
+        loadFacilities();
+    };
+</script>
+
+</body>
+</html>
