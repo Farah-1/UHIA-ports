@@ -369,29 +369,100 @@
         });
     }
 
+    // تحميل بيانات الموظفين
     async function loadUsersData() {
-        const snap = await getDocs(collection(db, "UsersRegistry"));
         const table = document.getElementById('users-table');
-        table.innerHTML = "";
-        let uCount = 0;
-        snap.forEach(d => {
-            const data = d.data();
-            if(data.role === 'admin') return;
-            uCount++;
-            table.innerHTML += `<tr>
-                <td><b>${data.fullName || '-'}</b></td>
-                <td>${data.nationalID || '-'}</td>
-                <td><code>${data.password || '-'}</code></td>
-                <td>${data.governorate || '-'} / ${data.facility || '-'}</td>
-                <td>${data.phoneNumber || '-'}</td>
-                <td>
-                    <button class="btn-edit" onclick="openEditUserModal('${d.id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">تعديل</button>
-                    <button class="btn-delete" onclick="deleteRecord('UsersRegistry', '${d.id}')">حذف</button>
-                </td>
-            </tr>`;
-        });
-        document.getElementById('stat-users').innerText = uCount;
+        table.innerHTML = "<tr><td colspan='6' style='text-align:center'>جاري تحميل البيانات...</td></tr>";
+        
+        try {
+            const snap = await getDocs(collection(db, "UsersRegistry"));
+            table.innerHTML = "";
+            let uCount = 0;
+
+            if (snap.empty) {
+                table.innerHTML = "<tr><td colspan='6' style='text-align:center'>لا يوجد موظفين مسجلين حالياً</td></tr>";
+            }
+
+            snap.forEach(d => {
+                const data = d.data();
+                // إذا أردت إخفاء الأدمن من القائمة
+                if(data.role === 'admin') return;
+
+                uCount++;
+                table.innerHTML += `<tr>
+                    <td><b>${data.fullName || 'بدون اسم'}</b></td>
+                    <td>${data.nationalID || d.id}</td>
+                    <td><code>${data.password || '-'}</code></td>
+                    <td>${data.governorate || '-'} / ${data.facility || '-'}</td>
+                    <td>${data.phoneNumber || '-'}</td>
+                    <td>
+                        <button class="btn-edit" onclick="openEditUserModal('${d.id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">تعديل</button>
+                        <button class="btn-delete" onclick="deleteRecord('UsersRegistry', '${d.id}')">حذف</button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('stat-users').innerText = uCount;
+        } catch (error) {
+            console.error("Error loading users:", error);
+            table.innerHTML = "<tr><td colspan='6' style='color:red; text-align:center'>حدث خطأ أثناء جلب البيانات</td></tr>";
+        }
     }
+
+    // تحميل بيانات المنشآت
+    async function loadFacilities() {
+        const table = document.getElementById('facilities-table');
+        table.innerHTML = "<tr><td colspan='4' style='text-align:center'>جاري التحميل...</td></tr>";
+
+        try {
+            const snap = await getDocs(collection(db, "FacilitiesReference"));
+            table.innerHTML = "";
+            document.getElementById('stat-fac').innerText = snap.size;
+
+            if (snap.empty) {
+                table.innerHTML = "<tr><td colspan='4' style='text-align:center'>لا توجد منشآت مضافة</td></tr>";
+            }
+
+            snap.forEach(d => {
+                const data = d.data();
+                // تأكد من أسماء الحقول lat و lng كما في السكربت السابق
+                const lat = data.lat || data.latitude || 0;
+                const lng = data.lng || data.longitude || 0;
+
+                table.innerHTML += `<tr>
+                    <td>${data.facilityName || 'غير مسمى'}</td>
+                    <td>${data.governorate || '-'}</td>
+                    <td>${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}</td>
+                    <td><button class="btn-delete" onclick="deleteRecord('FacilitiesReference', '${d.id}')">حذف</button></td>
+                </tr>`;
+            });
+        } catch (error) {
+            console.error("Error loading facilities:", error);
+        }
+    }
+
+    // async function loadUsersData() {
+    //     const snap = await getDocs(collection(db, "UsersRegistry"));
+    //     const table = document.getElementById('users-table');
+    //     table.innerHTML = "";
+    //     let uCount = 0;
+    //     snap.forEach(d => {
+    //         const data = d.data();
+    //         if(data.role === 'admin') return;
+    //         uCount++;
+    //         table.innerHTML += `<tr>
+    //             <td><b>${data.fullName || '-'}</b></td>
+    //             <td>${data.nationalID || '-'}</td>
+    //             <td><code>${data.password || '-'}</code></td>
+    //             <td>${data.governorate || '-'} / ${data.facility || '-'}</td>
+    //             <td>${data.phoneNumber || '-'}</td>
+    //             <td>
+    //                 <button class="btn-edit" onclick="openEditUserModal('${d.id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">تعديل</button>
+    //                 <button class="btn-delete" onclick="deleteRecord('UsersRegistry', '${d.id}')">حذف</button>
+    //             </td>
+    //         </tr>`;
+    //     });
+    //     document.getElementById('stat-users').innerText = uCount;
+    // }
 
     async function countActiveUsers() {
         const snap = await getDocs(collection(db, "AttendanceLogs"));
@@ -399,21 +470,21 @@
         document.getElementById('stat-active').innerText = activeNow.length;
     }
 
-    async function loadFacilities() {
-        const snap = await getDocs(collection(db, "FacilitiesReference"));
-        const table = document.getElementById('facilities-table');
-        table.innerHTML = "";
-        document.getElementById('stat-fac').innerText = snap.size;
-        snap.forEach(d => {
-            const data = d.data();
-            table.innerHTML += `<tr>
-                <td>${data.facilityName}</td>
-                <td>${data.governorate}</td>
-                <td>${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}</td>
-                <td><button class="btn-delete" onclick="deleteRecord('FacilitiesReference', '${d.id}')">حذف</button></td>
-            </tr>`;
-        });
-    }
+    // async function loadFacilities() {
+    //     const snap = await getDocs(collection(db, "FacilitiesReference"));
+    //     const table = document.getElementById('facilities-table');
+    //     table.innerHTML = "";
+    //     document.getElementById('stat-fac').innerText = snap.size;
+    //     snap.forEach(d => {
+    //         const data = d.data();
+    //         table.innerHTML += `<tr>
+    //             <td>${data.facilityName}</td>
+    //             <td>${data.governorate}</td>
+    //             <td>${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}</td>
+    //             <td><button class="btn-delete" onclick="deleteRecord('FacilitiesReference', '${d.id}')">حذف</button></td>
+    //         </tr>`;
+    //     });
+    // }
 
     window.deleteRecord = async (col, id) => {
         if(confirm("هل أنت متأكد من الحذف؟")) {
@@ -503,6 +574,5 @@
     window.location.href = "index.html";
 };
 </script>
-اخصاءي منفذ و مشرف ومدير اداره المستفيجين ومدير فرع و ادمن 
 </body>
 </html>
